@@ -1,0 +1,61 @@
+{
+  "generated": [
+    "bandit.motion",
+    "ellie.motion",
+    "toy.ball",
+    "toy.ducks",
+    "toy.rocket",
+    "toy.bear",
+    "toy.firecracker",
+    "tnt.motion",
+    "boom.motion"
+  ],
+  "ext": "jpg",
+  "opaque": [],
+  "additive": [
+    "boom.motion"
+  ],
+  "sheets": {
+    "bandit.motion": {
+      "cols": 4,
+      "rows": 3,
+      "align": "floor",
+      "mirrorRows": [
+        0,
+        1
+      ],
+      "rowIds": [
+        "tease",
+        "mood",
+        "run"
+      ]
+    },
+    "ellie.motion": {
+      "cols": 4,
+      "rows": 2,
+      "align": "floor",
+      "rowIds": [
+        "poses",
+        "poses"
+      ]
+    },
+    "tnt.motion": {
+      "cols": 2,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "damage",
+        "damage"
+      ]
+    },
+    "boom.motion": {
+      "cols": 4,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "fx",
+        "fx"
+      ]
+    }
+  }
+}

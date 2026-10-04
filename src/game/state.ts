@@ -150,7 +150,8 @@ export class GameState {
   private readonly doomed: Body[] = [];
   /** Crates about to go off, so a chain goes BOOM-BOOM-BOOM rather than one big BOOM. */
   private readonly blastHits: Body[] = [];
-  private readonly pendingBooms: { x: number; y: number; t: number }[] = [];
+  /** Read by the renderer, which shows each one as a crate glowing in its last moment. */
+  readonly pendingBooms: { x: number; y: number; t: number }[] = [];
 
   constructor() {
     for (let i = 0; i < MAX_EVENTS; i++) {

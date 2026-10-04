@@ -40,7 +40,22 @@ Fourteen levels. The first three are always open, and beating a level opens the 
 set with [Flappy Unicorn](https://jonbcampos.github.io/flappy-unicorn/),
 [Ellie's Rainbow Run](https://jonbcampos.github.io/runner-game/) and
 [Unicorn Squeeze Squad](https://jonbcampos.github.io/tower-defense/). It's built the same way: TypeScript, a 2D canvas, no
-engine, no runtime dependencies, and no art or audio files.
+engine, no runtime dependencies, and no audio files.
+
+## Art
+
+The raccoons, Ellie, the toys, the TNT crates and the explosions are painted by Google Gemini
+from the prompts in `scripts/art-manifest.mjs`; ART-PLAN.md is the plan behind them. All art is
+optional. Delete `public/sprites/` and every piece falls back to its hand-drawn version.
+
+```bash
+cp .env.example .env.local    # then put a Gemini API key in it (it's gitignored)
+npm run art                   # generates whatever is missing; --only=id to redo one piece
+npm run art:shrink            # resample to the sizes the game draws at
+```
+
+Then `__game.checkArt()` in the browser console confirms every sheet has the grid the slicer
+expects.
 
 ## Running it
 

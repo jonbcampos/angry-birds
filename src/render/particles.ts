@@ -32,6 +32,8 @@ export enum PKind {
   Ring,
   /** A burn mark left on the ground under a blast. */
   Scorch,
+  /** The painted explosion flipbook (generated art). `size` is the blast radius; `size2` mirrors. */
+  Flip,
   /**
    * A toot cloud: pale yellow-green, wobbling as it rises, with stink lines.
    * Deliberately nowhere near the art pipeline's #00FF00 key, so the same
@@ -295,6 +297,11 @@ export class Particles {
    * bounce on the grass, the crate's own splinters, and a scorch mark.
    */
   explosion(x: number, y: number, radius: number, confetti: boolean): void {
+    // First, so it draws underneath the procedural fire. Invisible if there's no art.
+    const flip = this.spawn(PKind.Flip, x, y, 0, 0, radius, 0.6, '#ffffff', 0, 0);
+    flip.bounces = false;
+    flip.rot = rand(-0.4, 0.4);
+    flip.size2 = Math.random() < 0.5 ? -1 : 1;
     const ring = this.spawn(PKind.Ring, x, y, 0, 0, 0.2, 0.38, '#ffffff', 0, 0);
     ring.size2 = radius * 1.15;
     ring.bounces = false;

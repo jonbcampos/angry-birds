@@ -170,3 +170,41 @@ That's how the first pass's tongues were found to be too small.
 
 **Revisit if:** the teasing gets repetitive. The aim-idle tease interval (`AIM_TEASE_EVERY`) and
 the bonk-toot chance are the levers. Don't add more raccoons teasing at once.
+
+## 13. Phase 1 art landed, and what it took
+
+Nine images from Gemini (`npm run art`): the raccoon sheet, Ellie's sheet, the five toys, the
+TNT crate and the explosion flipbook. ART-PLAN.md said twelve; it was a miscount and nine is the
+whole of Phase 1. All nine came back usable on the first run, about 8.5 MB, shrunk to 684 KB
+by `npm run art:shrink`.
+
+The pipeline is tower-defense's (the generator, shrink script, loader and `checkArt`), copied and
+extended in three places:
+
+- **`mirrorRows`.** The raccoon's sitting rows are mirrored to face Ellie and his running row
+  isn't, so a bonked raccoon runs away from her. Generated facing right, as every pose sheet is.
+- **`background: 'black'` → `additive`.** The explosion is painted on black, never keyed,
+  near-black clamped to black at load, and drawn with `'lighter'`. It glows over the scene with
+  no green fringes, which a keyed fireball would have had.
+- **`drawFitted` / `frameBounds`.** Art is fitted to physics shapes by its measured CONTENT box,
+  not its padded frame. A raccoon is fitted by height to 2.35× his radius with his bottom on the
+  circle's bottom, so he sits on his plank rather than in it. The TNT crate is fitted by width
+  and sat on its box's bottom edge, because its fuse makes the picture taller than the crate;
+  fitting the whole picture into the square squashed the crate.
+
+Two sheets came back with grid lines drawn between cells despite the prompt: faint dark lines
+on Ellie, grey on the explosion. The slicer's `CELL_INSET` already trims cell edges for this,
+which is exactly why tower-defense added it. But `checkArt` counted a vertical line as content
+on every row and flagged the correct explosion sheet as one band. The checker now ignores a
+thin strip at every cell boundary, the same strips the slicer throws away.
+
+Chained crates now stay visible for their 0.16 s countdown, glowing on the TNT sheet's last
+frame. `pendingBooms` became readable for this, and that's the only gameplay-side change.
+
+`__game.snap()` renders the current instant and pins it over the page. The live loop keeps
+running between console calls, so stepping to a 0.1 s explosion frame and *then* taking a
+screenshot showed whatever happened afterwards. Step and snap in one call.
+
+**Revisit if:** the raccoon reads too small on a phone. `RACCOON_ART_HEIGHT` scales him
+without touching his collision circle, but past about 2.6 his ears start overlapping the plank
+above.

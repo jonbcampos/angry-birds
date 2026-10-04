@@ -12,6 +12,7 @@ import { camera, frameLevel, shake, sx, sy, updateShake } from './render/camera'
 import { PALETTE } from './render/palette';
 import { Cast } from './render/cast';
 import { Particles } from './render/particles';
+import { loadSprites } from './render/sprites';
 import { drawScene } from './render/scene';
 import {
   drawHud,
@@ -37,6 +38,11 @@ const particles = new Particles();
 const audio = new Audio();
 const wakeLock = new WakeLock();
 const cast = new Cast(audio, particles);
+
+// Generated art, if any has been generated (scripts/generate-art.mjs). Fire and
+// forget: nothing waits for it and nothing breaks without it. Each piece that
+// arrives replaces the hand-drawn version of that one thing.
+loadSprites(import.meta.env.BASE_URL);
 const save = loadSave();
 audio.muted = save.muted;
 
@@ -380,11 +386,27 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 if (import.meta.env.DEV) {
-  void Promise.all([import('./dev/verify'), import('./dev/gallery')]).then(([{ verify, scan }, { gallery }]) => {
+  void Promise.all([import('./dev/verify'), import('./dev/gallery'), import('./dev/art')]).then(([{ verify, scan }, { gallery }, { checkArt }]) => {
     (window as unknown as Record<string, unknown>).__game = {
       state,
       cast,
       gallery,
+      checkArt,
+      /**
+       * Render this exact moment and pin it over the game as a still image,
+       * so a screenshot shows it even while the live loop keeps running. Tap to
+       * dismiss. For inspecting a 0.1s explosion frame by frame.
+       */
+      snap: () => {
+        render(1);
+        document.getElementById('snap')?.remove();
+        const img = document.createElement('img');
+        img.id = 'snap';
+        img.src = canvas.toDataURL();
+        Object.assign(img.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', zIndex: '10' });
+        img.addEventListener('pointerdown', () => img.remove());
+        document.body.appendChild(img);
+      },
       verify,
       scan,
       level: (id: number) => startLevel(id),

@@ -6,6 +6,7 @@ import { camera, sx, sy } from './camera';
 import { PALETTE, alpha } from './palette';
 import type { Cast, ElliePose, Mood } from './cast';
 import { PKind, type Particles } from './particles';
+import { drawFitted, frameBounds, sprite, spriteFrames } from './sprites';
 
 /**
  * Draws one frame of a level. Reads the game state; never changes it.
@@ -49,6 +50,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, state: GameState, alpha
     else if (b.tag === 'shot') drawFlyingToy(ctx, state, b, alphaT);
   }
 
+  drawPendingBooms(ctx, state, state.time);
   drawPouch(ctx, state);
   drawParticles(ctx, particles);
   drawBubble(ctx, state, cast);
@@ -297,6 +299,20 @@ function drawEllie(ctx: CanvasRenderingContext2D, state: GameState, cast: Cast):
   ctx.restore();
 }
 
+/** Frame index on the generated Ellie sheet, in the order the manifest asks for them. */
+const ELLIE_FRAME: Record<ElliePose, number> = {
+  ready: 0,
+  tease: 1,
+  aim: 2,
+  go: 3,
+  cheer: 4,
+  ew: 5,
+  amazed: 6,
+  sad: 7,
+};
+/** Her drawn height, metres: a five-year-old next to a 2.5m slingshot. */
+const ELLIE_ART_HEIGHT = 1.75;
+
 /**
  * Ellie in one pose, in metres, with her feet at the origin. `handX/handY` is
  * where her reaching hand goes while aiming. Exported for the dev gallery.
@@ -305,6 +321,22 @@ export function paintEllie(ctx: CanvasRenderingContext2D, pose: ElliePose, t: nu
   // Breathing, a jump for a cheer, a shake for a giggle.
   let lift = Math.sin(t * 2.2) * 0.02;
   if (pose === 'cheer') lift = -Math.abs(Math.sin(t * 8)) * 0.18;
+
+  const frame = spriteFrames('ellie.poses')?.[ELLIE_FRAME[pose]];
+  if (frame) {
+    const b = frameBounds(frame);
+    const h = ELLIE_ART_HEIGHT;
+    const w = (h * b.w) / b.h;
+    const shake = pose === 'ew' ? Math.sin(t * 30) * 0.02 : 0;
+    // A breath is a tiny vertical stretch from the feet up, which a still can do.
+    const breathe = pose === 'ready' ? 1 + Math.sin(t * 2.2) * 0.012 : 1;
+    ctx.save();
+    ctx.translate(shake, pose === 'cheer' ? lift : 0);
+    ctx.scale(1, breathe);
+    drawFitted(ctx, frame, -w / 2, -h, w, h);
+    ctx.restore();
+    return;
+  }
   let shakeX = pose === 'ew' ? Math.sin(t * 30) * 0.02 : 0;
   if (pose === 'tease') shakeX = Math.sin(t * 9) * 0.015;
 
@@ -650,6 +682,52 @@ function drawCracks(ctx: CanvasRenderingContext2D, b: Body, hw: number, hh: numb
 }
 
 /**
+ * The crate art is fitted by WIDTH and sat on the box's bottom edge. Its fuse
+ * makes the picture taller than the crate, so fitting the whole picture into
+ * the square would squash the crate to make room for a fuse.
+ */
+function drawCrate(ctx: CanvasRenderingContext2D, frame: HTMLCanvasElement, h: number): void {
+  const b = frameBounds(frame);
+  const w = h * 2;
+  const hh = (w * b.h) / b.w;
+  drawFitted(ctx, frame, -h, h - hh, w, hh);
+}
+
+function fuseSpark(ctx: CanvasRenderingContext2D, h: number, time: number): void {
+  ctx.fillStyle = Math.sin(time * 50) > 0 ? '#fff3b0' : '#ff8c42';
+  ctx.beginPath();
+  ctx.arc(h * 0.1, -h * 1.35, h * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/**
+ * Crates caught in a blast, in the 0.16s before they go off. They have already
+ * left the physics world, so without this a chain looked like crates vanishing
+ * and then exploding. Glowing and swelling, on the last frame of the TNT art.
+ */
+function drawPendingBooms(ctx: CanvasRenderingContext2D, state: GameState, time: number): void {
+  const frames = spriteFrames('tnt.damage');
+  for (const p of state.pendingBooms) {
+    const h = 0.4 * (1 + (0.16 - Math.max(0, p.t)) * 1.5);
+    ctx.save();
+    ctx.translate(sx(p.x) + Math.sin(time * 90) * 1.2, sy(p.y));
+    ctx.scale(camera.scale, camera.scale);
+    if (frames && frames[3]) {
+      drawCrate(ctx, frames[3], h);
+    } else {
+      ctx.fillStyle = '#ff8c42';
+      ctx.fillRect(-h, -h, h * 2, h * 2);
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,190,90,0.45)';
+    ctx.beginPath();
+    ctx.arc(0, 0, h * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+/**
  * A TNT crate: dark red, a wooden frame, big yellow letters, and a fuse that
  * fizzes once it has been knocked. The most recognisable object in the game,
  * deliberately — she should spot every crate in a fort before she aims.
@@ -662,6 +740,14 @@ function drawTnt(ctx: CanvasRenderingContext2D, b: Body, t: number, time: number
   const hurt = b.maxHp > 0 ? 1 - b.hp / b.maxHp : 0;
   // A knocked crate trembles: it's about to go.
   if (hurt > 0) ctx.translate(Math.sin(time * 70) * 0.02, 0);
+
+  const frames = spriteFrames('tnt.damage');
+  if (frames && frames.length >= 3) {
+    drawCrate(ctx, frames[hurt <= 0 ? 0 : hurt < 0.5 ? 1 : 2]!, h);
+    if (hurt > 0) fuseSpark(ctx, h, time);
+    ctx.restore();
+    return;
+  }
 
   ctx.fillStyle = '#b5432c';
   ctx.fillRect(-h, -h, h * 2, h * 2);
@@ -728,7 +814,40 @@ function drawBandit(ctx: CanvasRenderingContext2D, b: Body, t: number, cast: Cas
  * A raccoon, drawn as a ball with a face. Shared with the fleeing-raccoon
  * particle and the HUD counter so all three are recognisably the same animal.
  */
+/** Where each mood lives on the generated raccoon sheet: [row id, frame]. */
+const MOOD_FRAME: Record<Mood, ['bandit.tease' | 'bandit.mood', number]> = {
+  raspberry: ['bandit.tease', 0],
+  nyah: ['bandit.tease', 1],
+  toot: ['bandit.tease', 2],
+  burp: ['bandit.tease', 3],
+  smug: ['bandit.mood', 0],
+  laugh: ['bandit.mood', 1],
+  scared: ['bandit.mood', 2],
+  dizzy: ['bandit.mood', 3],
+};
+
+/**
+ * A raccoon's art is fitted by height to his collision circle: the drawn
+ * raccoon is a bit taller than the circle because of his ears, and his bottom
+ * sits on the circle's bottom, so he rests ON his plank rather than in it.
+ */
+const RACCOON_ART_HEIGHT = 2.35;
+
 export function paintRaccoon(ctx: CanvasRenderingContext2D, r: number, time: number, mood: Mood, hurt: number): void {
+  const [row, index] = MOOD_FRAME[mood];
+  const frame = spriteFrames(row)?.[index];
+  if (frame) {
+    const b = frameBounds(frame);
+    const h = r * RACCOON_ART_HEIGHT;
+    const w = (h * b.w) / b.h;
+    // A small wobble for the moods that move, since one frame can't.
+    ctx.save();
+    if (mood === 'laugh') ctx.rotate(Math.sin(time * 22) * 0.07);
+    else if (mood === 'burp') ctx.scale(1 + Math.sin(time * 14) * 0.03, 1);
+    drawFitted(ctx, frame, -w / 2, r - h, w, h);
+    ctx.restore();
+    return;
+  }
   ctx.save();
   // Whole-body poses. A toot lifts one hip, so he leans over on the other;
   // laughing shakes him; a burp puffs him up.
@@ -1059,6 +1178,35 @@ export function paintToy(
   time: number,
   boosting: boolean,
 ): void {
+  const art = sprite(`toy.${kind === 'popper' ? 'firecracker' : kind}`);
+  if (art) {
+    // Same rotation rules as the hand-drawn toys below; the rocket's flame
+    // stays procedural, drawn first so the rocket sits on top of it.
+    let angle = spin;
+    if (kind === 'rocket') {
+      angle = heading;
+      if (boosting) {
+        ctx.save();
+        ctx.rotate(heading);
+        const f = 0.8 + Math.sin(time * 60) * 0.25;
+        ctx.fillStyle = '#ffb703';
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.9, -r * 0.4);
+        ctx.lineTo(-r * (2.4 * f), 0);
+        ctx.lineTo(-r * 0.9, r * 0.4);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (kind === 'ducks') angle = spin * 0.4;
+    else if (kind === 'bear') angle = spin * 0.5;
+    const b = frameBounds(art);
+    const scale = (r * 2.15) / Math.max(b.w, b.h);
+    ctx.save();
+    ctx.rotate(angle);
+    drawFitted(ctx, art, (-b.w * scale) / 2, (-b.h * scale) / 2, b.w * scale, b.h * scale);
+    ctx.restore();
+    return;
+  }
   switch (kind) {
     case 'ball': {
       ctx.rotate(spin);
@@ -1271,10 +1419,24 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particles): voi
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(camera.scale, camera.scale);
-        if (p.stage === 0) ctx.rotate(p.rot);
-        // Running away, facing right — the only time a bandit turns its back.
-        else ctx.scale(-1, 1);
-        paintRaccoon(ctx, p.size, p.rot, 'scared', 0);
+        if (p.stage === 0) {
+          ctx.rotate(p.rot);
+          paintRaccoon(ctx, p.size, p.rot, 'scared', 0);
+        } else {
+          // Running away to the right. The art's run cycle already faces
+          // right; frames advance by distance run, not by time.
+          const run = spriteFrames('bandit.run');
+          if (run) {
+            const frame = run[Math.floor(p.x * 2.5) % run.length]!;
+            const b = frameBounds(frame);
+            const h = p.size * 1.9;
+            const w = (h * b.w) / b.h;
+            drawFitted(ctx, frame, -w / 2, p.size - h, w, h);
+          } else {
+            ctx.scale(-1, 1);
+            paintRaccoon(ctx, p.size, p.rot, 'scared', 0);
+          }
+        }
         ctx.restore();
         break;
       case PKind.Fire: {
@@ -1309,6 +1471,22 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particles): voi
       }
       case PKind.Scorch:
         break;
+      case PKind.Flip: {
+        // The painted explosion flipbook, on black, added as light.
+        const frames = spriteFrames('boom.fx');
+        if (!frames) break;
+        const frame = frames[Math.min(frames.length - 1, Math.floor((1 - f) * frames.length))]!;
+        const d = p.size * 2.3 * camera.scale;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(x, y);
+        ctx.rotate(p.rot);
+        ctx.scale(p.size2, 1);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(frame, -d / 2, (-d * frame.height) / frame.width / 2, d, (d * frame.height) / frame.width);
+        ctx.restore();
+        break;
+      }
       case PKind.Toot: {
         // Three lobes, wobbling as they rise, with a pair of stink lines.
         const a = 0.75 * Math.min(1, f * 2);

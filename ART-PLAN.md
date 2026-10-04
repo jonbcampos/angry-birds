@@ -1,8 +1,14 @@
 # Art plan: sprite sheets and animation
 
 Generated art for *Ellie's Slingshot*, using the same Gemini pipeline that brought
-`../tower-defense` to life. This is a plan: nothing in it has been generated or built yet. It has
-two halves:
+`../tower-defense` to life.
+
+> **Status: Phase 1 is done**: the raccoons, Ellie, the five toys, the TNT crate and the explosion
+> flipbook are generated and in the game (DECISIONS.md 13). Phase 1 turned out to be nine images,
+> not twelve. Phases 2 and 3 (materials, slingshot, backdrop, ground, title) and the Whoopee
+> Cushion are still plans.
+
+It has two halves:
 
 1. **The requests.** Every image we'd ask Gemini for, with its grid, aspect, size, and a drafted
    prompt.
