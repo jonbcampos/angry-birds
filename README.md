@@ -1,0 +1,111 @@
+# Ellie's Slingshot
+
+The Raccoon Bandits raided the toy box and built forts out of the loot. Ellie fires the toys back
+at them with her slingshot. Pull back, let go, and bonk the bandits.
+
+Nobody is hurt. A bonked raccoon tumbles off its fort, lands on its feet, and runs away.
+
+The raccoons are cheeky. They burp at Ellie when a level starts, toot when she takes too long
+aiming, point and laugh when she misses, and do a victory dance if she loses. A bonked raccoon
+sometimes toots in surprise on his way out. Ellie answers every tease, sticking her tongue out
+or holding her nose and giggling.
+
+| Toy | Tap in the air to… | Best against |
+| --- | --- | --- |
+| **Bouncy Ball** | nothing; it just bounces | anything soft |
+| **Rubber Ducks** | split into three | glass |
+| **Toy Rocket** | ZOOM in a straight line | wood |
+| **Big Teddy** | stomp straight down | stone |
+| **Firecracker** | go BOOM, a TNT-sized blast (it also goes off by itself a second after it hits) | everything nearby |
+
+Forts are made of **wood** (splits into halves), **glass** (shatters), **stone** (heavy, tough,
+splits), and **TNT**.
+
+### TNT
+
+Ellie's favourite part of Angry Birds is the TNT, so this game has lots of it. Thirteen of the 14
+levels have crates, and two (*Boom Town* and *The Big Bang*) are built around chain reactions. Any
+solid knock sets a crate off. Each blast:
+
+- throws everything within 4.2 m outward and upward, with heavy blocks moving less
+- damages enough to break stone near the middle and bonk any raccoon nearby
+- sets off every other crate in range a moment later, so chains go BOOM-BOOM-BOOM
+- shows a white flash, a shockwave ring, and a fireball that cools from white to orange to red to
+  smoke, plus embers, splinters, a scorch mark and a "BOOM!" ("MEGA BOOM!" for a chain of three
+  or more)
+- shakes the screen hard, slows time briefly so you can watch it all fly, and plays a deep layered
+  boom
+
+Fourteen levels. The first three are always open, and beating a level opens the next. Fourth in a
+set with [Flappy Unicorn](https://jonbcampos.github.io/flappy-unicorn/),
+[Ellie's Rainbow Run](https://jonbcampos.github.io/runner-game/) and
+[Unicorn Squeeze Squad](https://jonbcampos.github.io/tower-defense/). It's built the same way: TypeScript, a 2D canvas, no
+engine, no runtime dependencies, and no art or audio files.
+
+## Running it
+
+```bash
+npm install && npm run dev
+```
+
+Open the printed Network URL on a phone. Hold it either way, because the game rotates itself. On
+desktop, drag with the mouse; `Space` uses the toy's trick, `R` restarts, and `Esc` pauses.
+
+## Why it's built this way
+
+[DECISIONS.md](DECISIONS.md) records what was decided and why. The short version:
+
+- **`src/physics/`**: a small rigid-body engine, written for this game. It's the heart of the
+  project, because the physics is the game.
+- **`src/game/`**: the simulation, in metres. It never imports from `src/render/`, and it
+  reports what happened through an event queue that `main.ts` drains into particles and sound.
+- **`src/game/config.ts`**: every tuning number. The content tables `MATERIALS`, `SHOTS` (in
+  `content.ts`) and `LEVELS` are the exceptions.
+- Bodies, contacts, events and particles all live in fixed pools.
+
+### The physics, in five ideas
+
+**1. It simulates in metres, not pixels.** Gravity is 10 m/s² and a plank is 2 m long. The
+solver's tolerances only make sense at that scale; the renderer converts to pixels.
+
+**2. Contacts come in pairs of points, and they remember.** A plank resting on a plank touches at
+both ends of the overlap, and each contact starts every step from last step's impulse (warm
+starting). Without those two things, tall towers shiver and sag.
+
+**3. Overlap is fixed by moving, not by pushing.** Penetration is corrected by nudging positions
+directly instead of adding velocity, so the solver never pumps energy into a resting stack. That's
+the difference between forts that stand still and forts that "breathe".
+
+**4. Damage is impact energy.** Every contact that actually pushed reports its approach energy,
+½·m·v² using the pair's reduced mass. Each material has a toughness per square metre, so long
+planks are sturdier than short ones, and settling taps below a floor do nothing. Toys multiply
+damage by material, and that's what makes picking a toy a real choice.
+
+**5. Things break into real pieces.** A broken wood or stone block splits into two physical halves
+that keep the parent's spin, and those halves can knock more things over. Glass shatters into
+particles. Only debris too small to push anything is visual-only.
+
+### Verifying it
+
+```js
+__game.verify()   // every fort stands up on its own: wakes all bodies, 5s, no damage, no drift
+__game.scan()     // per level: the best single plain shot over an angle × power grid
+```
+
+Levels start asleep so they don't wobble when they appear, which means a fort that can't hold
+itself up would look fine until the first hit. `verify()` is the check that catches that.
+
+`__game.gallery()` shows every raccoon mood and Ellie pose drawn large, `__game.level(n)` jumps to a level, `__game.advance(seconds)` runs the full game loop by hand, and
+`__game.unlockAll()` opens everything.
+
+## Status
+
+Playable and deployed: https://jonbcampos.github.io/angry-birds/
+
+Every push to `main` builds and deploys to GitHub Pages (`.github/workflows/deploy.yml`). The
+build typechecks first, so a type error fails the deploy instead of shipping. It installs to a
+phone's home screen and plays offline after the first visit. Bump `VERSION` in `public/sw.js`
+to force installed copies to drop their cache.
+
+The home-screen icon is drawn by `node scripts/make-icons.mjs`, a cheeky raccoon mid-raspberry,
+so it can be redrawn from code when the art changes.

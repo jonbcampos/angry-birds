@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# Secrets. `.env.local` is where the Gemini API key lives; `*.local` above
+# already covers it, and it is repeated here explicitly so that nobody
+# "tidies up" that glob without noticing what it is protecting.
+.env
+.env.local
+.env.*.local

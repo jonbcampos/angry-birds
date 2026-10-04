@@ -1,0 +1,71 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Lets you redeploy from the Actions tab without pushing a commit.
+  workflow_dispatch:
+
+# Pages deployment needs these; the default GITHUB_TOKEN has neither.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race. Queue rather than cancel, so a push that lands
+# mid-deploy still ends up live instead of being silently dropped.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Typechecks as part of `build`, so a type error fails the deploy rather
+      # than shipping.
+      - name: Build
+        env:
+          # Pages serves this repo from /angry-birds/, not the domain root,
+          # so every asset URL needs that prefix. See vite.config.ts.
+          GH_PAGES_BASE: /angry-birds/
+        run: npm run build
+
+      # index.html is the only unhashed file, and GitHub Pages sends a long
+      # max-age by default. A 404.html copy also makes deep links work.
+      - name: Add SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      # `enablement` turns Pages on for the repo if it isn't already, using the
+      # workflow's own pages:write token.
+      #
+      # It only works when that token has admin on the repo. On this one it did
+      # not, and the first deploy failed with "Create Pages site failed:
+      # Resource not accessible by integration" — Pages had to be switched on by
+      # hand in Settings → Pages → Source: GitHub Actions. Left enabled anyway
+      # so a fresh fork or a re-created repo doesn't need the manual step.
+      - uses: actions/configure-pages@v6
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
