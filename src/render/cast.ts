@@ -86,6 +86,9 @@ export class Cast {
   private aimIdle = 0;
   private nextAimTease = AIM_TEASE_AFTER;
   private dancing = false;
+  /** When Ellie last cheered or wowed out loud, so a chain of bonks is one "Got you!", not five. */
+  private lastCheer = -10;
+  private lastWow = -10;
   bubble: Bubble | null = null;
 
   constructor(
@@ -110,10 +113,14 @@ export class Cast {
     this.nextAimTease = AIM_TEASE_AFTER;
     this.dancing = false;
     this.bubble = null;
+    this.lastCheer = -10;
+    this.lastWow = -10;
     const first = this.randomBandit(state);
-    if (first) {
-      this.schedule('tease', 1.2, first.id, 'burp', 1.1);
-      this.schedule('tease', 2.9, first.id, 'raspberry', 1.1);
+    if (first && state.phase !== 'title') {
+      // "These toys are OURS now!", a big burp, and a raspberry. Hello, Ellie.
+      this.audio.say(['r.hello'], { delay: 0.5, rate: BANDIT_RADIUS / this.radius(first) });
+      this.schedule('tease', 3.3, first.id, 'burp', 1.1);
+      this.schedule('tease', 5.0, first.id, 'raspberry', 1.1);
     }
   }
 
@@ -126,11 +133,19 @@ export class Cast {
         // toots in surprise on the way out.
         const tooting = Math.random() < BONK_TOOT_CHANCE;
         this.particles.raccoon(e.x, e.y, e.vx, e.vy, e.w, tooting);
+        const pitch = BANDIT_RADIUS / Math.max(0.2, e.w);
         if (tooting) {
-          this.audio.toot('squeak', BANDIT_RADIUS / Math.max(0.2, e.w));
+          this.audio.toot('squeak', pitch);
           this.say(-1, e.x, e.y, e.w, 'toot!');
+          this.audio.say(['r.oops'], { rate: pitch, delay: 0.35 });
+        } else if (Math.random() < 0.6) {
+          this.audio.say(['r.whoa', 'r.nofair'], { rate: pitch, delay: 0.1 });
         }
         this.setEllie('cheer', 0.8);
+        if (this.clock - this.lastCheer > 2.5) {
+          this.lastCheer = this.clock;
+          this.audio.say(['e.gotcha', 'e.yay', 'e.takethat'], { delay: 0.9 });
+        }
         if (tooting) this.schedule('ellie', 0.85, -1, 'smug', 1.1, 'ew');
 
         // His neighbours are scared... and then the bravest burps at her anyway.
@@ -141,7 +156,10 @@ export class Cast {
           this.flinchUntil[b.id] = this.clock + 1;
           if (!brave || Math.random() < 0.5) brave = b;
         }
-        if (brave) this.schedule('tease', 1.6, brave.id, 'burp', 1.1);
+        if (brave) {
+          this.audio.say(['r.uhoh'], { rate: BANDIT_RADIUS / this.radius(brave), delay: 1.2 });
+          this.schedule('tease', 2.2, brave.id, 'burp', 1.1);
+        }
         break;
       }
       case 'impact':
@@ -150,6 +168,10 @@ export class Cast {
       case 'boom':
         this.flinchNear(state, e.x, e.y, e.value * 1.4, 0.8);
         this.setEllie('amazed', 1);
+        if (this.clock - this.lastWow > 3) {
+          this.lastWow = this.clock;
+          this.audio.say(['e.kaboom', 'e.wow'], { delay: 0.35 });
+        }
         break;
       case 'ability':
         // Even she can't keep a straight face at a fart-jet.
@@ -166,10 +188,13 @@ export class Cast {
       case 'won':
         this.setEllie('cheer', 99);
         this.bubble = null;
+        this.audio.say(['e.won'], { delay: 0.5, interrupt: true });
         break;
       case 'lost': {
         this.dancing = true;
         this.setEllie('sad', 99);
+        this.audio.say(['r.dance'], { delay: 0.5, interrupt: true });
+        this.audio.say(['e.ohno'], { delay: 3.4 });
         const last = this.randomBandit(state);
         if (last) this.schedule('finale', 2.4, last.id, 'toot', 1.2);
         break;
@@ -215,10 +240,12 @@ export class Cast {
       case 'tease':
         this.tease(state, act.who, act.mood, act.dur);
         break;
-      case 'ellie':
+      case 'ellie': {
         this.setEllie(act.pose, act.dur);
-        this.audio.play('ellie-giggle');
+        const lines = act.pose === 'ew' ? ['e.ew', 'e.ew2'] : act.pose === 'tease' ? ['e.nyah', 'e.hmph'] : [];
+        if (!this.audio.say(lines)) this.audio.play('ellie-giggle');
         break;
+      }
       case 'laugh-all': {
         if (state.phase !== 'aim' && state.phase !== 'lost') return;
         let speaker: Body | null = null;
@@ -229,7 +256,9 @@ export class Cast {
           if (!speaker || Math.random() < 0.4) speaker = b;
         }
         if (!speaker) return;
-        this.audio.play('giggle');
+        if (!this.audio.say(['r.missed', 'r.missed2', 'r.missed3'], { rate: BANDIT_RADIUS / this.radius(speaker) })) {
+          this.audio.play('giggle');
+        }
         this.say(speaker.id, speaker.x, speaker.y, this.radius(speaker), pick(BUBBLE.laugh!));
         // Ellie answers: tongue out, back at all of them.
         this.schedule('ellie', 0.9, -1, 'smug', 0.9, 'tease');
@@ -265,14 +294,17 @@ export class Cast {
 
     switch (mood) {
       case 'toot':
-        this.audio.toot(pick(TOOTS), pitch);
+        // A cartoon mouth-fart raspberry if it's been recorded, the synth otherwise.
+        if (!this.audio.playRecorded(['r.fart1', 'r.fart2', 'r.fart3'], { rate: pitch })) this.audio.toot(pick(TOOTS), pitch);
         this.particles.toot(b.x, b.y, r, 1);
+        this.audio.say(['r.oops', 'r.oops2'], { rate: pitch, delay: 0.6 });
         break;
       case 'burp':
         this.audio.burp(pitch);
+        this.audio.say(['r.excuse'], { rate: pitch, delay: 0.7 });
         break;
       case 'nyah':
-        this.audio.play('nyah');
+        if (!this.audio.say(['r.nyah', 'r.nyah2'], { rate: pitch })) this.audio.play('nyah');
         break;
       case 'raspberry':
         this.audio.play('raspberry');

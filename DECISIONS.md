@@ -249,3 +249,39 @@ exactly that, and by the simulation, which counts any bandit whose centre leaves
 The bonk is reported at the edge of the picture, so the run-away and the +5000 happen where she
 can see them. A raccoon above the top of the screen gets a face marker on the top edge, like the
 arrow for a toy in flight. Nothing she has to deal with is ever invisible.
+
+## 16. Voices and music from Gemini; effects rebuilt by hand; drifting clouds
+
+**What Gemini can make.** Listing the models with this key: text-to-speech and Lyria (music).
+There is no sound-effects model. Lyria, asked for "a single explosion sound effect, not music",
+returned 26 seconds of polka with an explosion at 0:16. So voices and music are generated
+(`npm run sound`, `scripts/sound-manifest.mjs`), and every effect is synthesised (`src/core/sfx.ts`).
+
+**Voices.** Stage directions written as plain text get read aloud ("Say it like a cheeky
+raccoon: …" came back as 8.7 seconds of the instructions); a system instruction is refused by
+the TTS models. A director's-notes prompt where only the `#### TRANSCRIPT` is spoken works. The
+first cast was judged "almost flirty" for Ellie and not cartoonish enough overall, with
+cartoonish defined as *shorter and higher*. So the profiles now ask for TV-cartoon characters,
+the lines are two or three words, and the sound index carries a playback `rate` per character
+(Ellie 1.25, raccoons 1.35): faster playback is shorter and higher at once, the classic
+cartoon-voice trick, and it can be tuned without re-recording. Lines are trimmed of silence and
+peak-normalised, play one at a time, and duck the music.
+
+**Music.** Three Lyria clips: title, day, dusk. They're about 30 s and fade out, so the player
+finds the steady stretch by RMS and crossfades it into a seamless loop.
+
+**Effects.** Rebuilt sample by sample, because one oscillator per sound is what made the set
+sound like an old game. Struck things are modal (several damped partials: wood close and fast,
+glass high and ringing, stone low and choked). Explosions are a crack, a pitch-diving overdriven
+thump, a darkening brown-noise rumble, and debris crackle. The rubber band is Karplus-Strong. The
+toot is a jittered pulse train ringing at a low resonance, with sputters: the vocal-cord model.
+The raccoons' teasing toots use recorded mouth-fart raspberries from the voice actor when
+present. Everything runs through a compressor and a short procedural reverb. Gemini was tried
+as a judge of the results and is useless for it (it rated a plain hum 7/10 as a fart), so
+previews are rendered for a human to listen to.
+
+**Clouds.** Gemini, asked twice to paint the clouds out of the meadow, removed the horizon haze
+and left every cloud. `src/render/backdrop.ts` does it at load instead: it fits the sky's
+colour per row as a line across the row (the dusk sky runs peach to lavender), masks whatever
+differs, repaints the sky, and lifts each whole cloud out as its own image. Those exact clouds
+then drift, each with a smaller, fainter, slower copy behind it for depth.

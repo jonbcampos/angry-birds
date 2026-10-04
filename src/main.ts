@@ -43,6 +43,8 @@ const cast = new Cast(audio, particles);
 // forget: nothing waits for it and nothing breaks without it. Each piece that
 // arrives replaces the hand-drawn version of that one thing.
 loadSprites(import.meta.env.BASE_URL);
+// Voices and music (scripts/generate-sound.mjs), equally optional.
+audio.loadRecorded(import.meta.env.BASE_URL);
 const save = loadSave();
 audio.muted = save.muted;
 
@@ -262,7 +264,7 @@ function onEvent(e: GameEvent): void {
       } else if (e.tag === 'fart') {
         // The longest, silliest toot in the game: a rumble, then a squeak.
         audio.toot('rumble', 0.9, 1);
-        audio.toot('squeak', 1.1, 0.7);
+        audio.playRecorded(['r.fart3', 'r.fart1'], { rate: 0.9, gain: 0.8, delay: 0.1 });
         particles.toot(e.x, e.y, 0.5, -1);
       } else if (e.tag === 'slam') {
         audio.play('slam');
@@ -286,6 +288,7 @@ function onEvent(e: GameEvent): void {
       if (e.tag === 'toy') audio.play('pop');
       shake(1);
       camera.flash = 1;
+      audio.duck(0.3, 0.9);
       // A beat of slow motion, so the blast and the flying blocks can actually
       // be SEEN. Each blast in a chain renews it, so a chain plays out slowly.
       slowmo = BOOM_SLOWMO;
@@ -330,6 +333,12 @@ function update(dt: number): void {
     // A few px of dead zone, so a tap doesn't creak the band.
     if (state.aiming || Math.hypot(dx, dy) > 4) state.setAim(dx, dy);
   }
+
+  // Music follows where she is: the title theme on the menus, a sunny tune for
+  // the daytime levels, a warmer one for the sunset levels.
+  const menu = state.phase === 'title' || state.phase === 'select';
+  audio.setMusic(menu ? 'music.title' : state.level.id >= 11 ? 'music.dusk' : 'music.day');
+  audio.updateMusic();
 
   if (state.phase === 'paused' || state.phase === 'title' || state.phase === 'select') return;
 

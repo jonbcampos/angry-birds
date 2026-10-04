@@ -6,6 +6,7 @@ import { camera, sx, sy } from './camera';
 import { PALETTE, alpha } from './palette';
 import type { Cast, ElliePose, Mood } from './cast';
 import { PKind, type Particles } from './particles';
+import { cleanSky, type Cloud } from './backdrop';
 import { drawFitted, frameBounds, sprite, spriteFrames } from './sprites';
 
 /**
@@ -103,12 +104,56 @@ export function drawTitleBackdrop(ctx: CanvasRenderingContext2D): boolean {
   return true;
 }
 
+/**
+ * The painted clouds, drifting. Each cloud appears twice: as painted, drifting
+ * at a gentle pace, and as a smaller, fainter, slower copy higher up behind it,
+ * which is what makes the sky read as deep rather than as a sliding layer.
+ * Speeds are in screen pixels a second, slow enough to notice only if you watch.
+ */
+function drawDriftingClouds(
+  ctx: CanvasRenderingContext2D,
+  clouds: readonly Cloud[],
+  scale: number,
+  dx: number,
+  dy: number,
+  t: number,
+): void {
+  const span = SCREEN.w + 160;
+  for (const far of [true, false]) {
+    clouds.forEach((c, i) => {
+      const k = far ? 0.55 : 1;
+      const w = c.image.width * scale * k;
+      const h = c.image.height * scale * k;
+      const speed = far ? 1.6 + i * 0.4 : 3.2 + i * 0.9;
+      const home = dx + c.x * scale + (far ? span * 0.45 + i * 70 : 0);
+      const x = ((((home + t * speed + 80) % span) + span) % span) - 80;
+      const y = dy + c.y * scale - (far ? 14 + i * 6 : 0);
+      ctx.globalAlpha = far ? 0.6 : 1;
+      ctx.drawImage(c.image, x, y, w, h);
+    });
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawBackdrop(ctx: CanvasRenderingContext2D, t: number, levelId: number): void {
   const art = sprite(levelId >= DUSK_FROM_LEVEL ? 'meadow.dusk' : 'meadow') ?? sprite('meadow');
   if (art) {
     // Bottom-aligned a little below the ground line: the picture's bottom
-    // tenth is plain grass, which the ground strip covers.
-    drawCover(ctx, art, -4, -4, SCREEN.w + 8, camera.groundY + 14, true);
+    // tenth is plain grass, which the ground strip covers. Its painted clouds
+    // are lifted out (see backdrop.ts) and drawn drifting instead.
+    const sky = cleanSky(art);
+    const img = sky ? sky.clean : art;
+    const bw = SCREEN.w + 8;
+    const bh = camera.groundY + 14;
+    const scale = Math.max(bw / img.width, bh / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    const dx = -4 + (bw - dw) / 2;
+    const dy = -4 + bh - dh;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    if (sky) drawDriftingClouds(ctx, sky.clouds, scale, dx, dy, t);
+    ctx.imageSmoothingEnabled = false;
     return;
   }
   const g = ctx.createLinearGradient(0, 0, 0, SCREEN.h);
