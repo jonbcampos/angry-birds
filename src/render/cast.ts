@@ -52,8 +52,10 @@ export interface Bubble {
 /** Seconds between one raccoon's tease and the next one's. */
 const TEASE_COOLDOWN = 2.5;
 /** She's been sitting on the aim this long: the nearest raccoon gets bored and teases. */
-const AIM_TEASE_AFTER = 3.5;
-const AIM_TEASE_EVERY = 6.5;
+const AIM_TEASE_AFTER = 6;
+const AIM_TEASE_EVERY = 12;
+/** Seconds of quiet after any raccoon line before another raccoon may talk. */
+const RACCOON_QUIET = 4;
 /** A bonked raccoon toots in surprise this often. Random so it stays funny. */
 const BONK_TOOT_CHANCE = 1 / 3;
 const NEIGHBOUR_RADIUS = 3.5;
@@ -88,6 +90,8 @@ export class Cast {
   private dancing = false;
   /** When Ellie last cheered or wowed out loud, so a chain of bonks is one "Got you!", not five. */
   private lastCheer = -10;
+  /** No raccoon speaks again until this time. */
+  private quietUntil = 0;
   private lastWow = -10;
   bubble: Bubble | null = null;
 
@@ -115,12 +119,14 @@ export class Cast {
     this.bubble = null;
     this.lastCheer = -10;
     this.lastWow = -10;
+    this.quietUntil = 0;
     const first = this.randomBandit(state);
     if (first && state.phase !== 'title') {
-      // "These toys are OURS now!", a big burp, and a raspberry. Hello, Ellie.
-      this.audio.say(['r.hello'], { delay: 0.5, rate: BANDIT_RADIUS / this.radius(first) });
-      this.schedule('tease', 3.3, first.id, 'burp', 1.1);
-      this.schedule('tease', 5.0, first.id, 'raspberry', 1.1);
+      // One hello per level: either "Our toys now!" or a big burp, not both.
+      // (The first version did a line, a burp AND a raspberry, and the raccoons
+      // came across as talking too much.)
+      if (Math.random() < 0.4) this.chatter(['r.hello'], BANDIT_RADIUS / this.radius(first), 0.6, 1);
+      else this.schedule('tease', 1.5, first.id, 'burp', 1.1);
     }
   }
 
@@ -137,9 +143,9 @@ export class Cast {
         if (tooting) {
           this.audio.toot('squeak', pitch);
           this.say(-1, e.x, e.y, e.w, 'toot!');
-          this.audio.say(['r.oops'], { rate: pitch, delay: 0.35 });
-        } else if (Math.random() < 0.6) {
-          this.audio.say(['r.whoa', 'r.nofair'], { rate: pitch, delay: 0.1 });
+          this.chatter(['r.oops'], pitch, 0.35, 0.5);
+        } else {
+          this.chatter(['r.whoa', 'r.nofair'], pitch, 0.1, 0.25);
         }
         this.setEllie('cheer', 0.8);
         if (this.clock - this.lastCheer > 2.5) {
@@ -157,8 +163,8 @@ export class Cast {
           if (!brave || Math.random() < 0.5) brave = b;
         }
         if (brave) {
-          this.audio.say(['r.uhoh'], { rate: BANDIT_RADIUS / this.radius(brave), delay: 1.2 });
-          this.schedule('tease', 2.2, brave.id, 'burp', 1.1);
+          this.chatter(['r.uhoh'], BANDIT_RADIUS / this.radius(brave), 1.2, 0.3);
+          if (Math.random() < 0.4) this.schedule('tease', 2.2, brave.id, 'burp', 1.1);
         }
         break;
       }
@@ -193,7 +199,7 @@ export class Cast {
       case 'lost': {
         this.dancing = true;
         this.setEllie('sad', 99);
-        this.audio.say(['r.dance'], { delay: 0.5, interrupt: true });
+        this.chatter(['r.dance'], 1, 0.5, 1, true);
         this.audio.say(['e.ohno'], { delay: 3.4 });
         const last = this.randomBandit(state);
         if (last) this.schedule('finale', 2.4, last.id, 'toot', 1.2);
@@ -256,7 +262,7 @@ export class Cast {
           if (!speaker || Math.random() < 0.4) speaker = b;
         }
         if (!speaker) return;
-        if (!this.audio.say(['r.missed', 'r.missed2', 'r.missed3'], { rate: BANDIT_RADIUS / this.radius(speaker) })) {
+        if (!this.chatter(['r.missed', 'r.missed2', 'r.missed3'], BANDIT_RADIUS / this.radius(speaker), 0, 0.8)) {
           this.audio.play('giggle');
         }
         this.say(speaker.id, speaker.x, speaker.y, this.radius(speaker), pick(BUBBLE.laugh!));
@@ -297,14 +303,14 @@ export class Cast {
         // A cartoon mouth-fart raspberry if it's been recorded, the synth otherwise.
         if (!this.audio.playRecorded(['r.fart1', 'r.fart2', 'r.fart3'], { rate: pitch })) this.audio.toot(pick(TOOTS), pitch);
         this.particles.toot(b.x, b.y, r, 1);
-        this.audio.say(['r.oops', 'r.oops2'], { rate: pitch, delay: 0.6 });
+        this.chatter(['r.oops', 'r.oops2'], pitch, 0.6, 0.35);
         break;
       case 'burp':
         this.audio.burp(pitch);
-        this.audio.say(['r.excuse'], { rate: pitch, delay: 0.7 });
+        this.chatter(['r.excuse'], pitch, 0.7, 0.4);
         break;
       case 'nyah':
-        if (!this.audio.say(['r.nyah', 'r.nyah2'], { rate: pitch })) this.audio.play('nyah');
+        if (!this.chatter(['r.nyah', 'r.nyah2'], pitch, 0, 1)) this.audio.play('nyah');
         break;
       case 'raspberry':
         this.audio.play('raspberry');
@@ -349,6 +355,20 @@ export class Cast {
   }
 
   // --- Helpers --------------------------------------------------------------
+
+  /**
+   * A raccoon line, maybe. `chance` makes most follow-up lines occasional, and
+   * a minimum gap between ANY two raccoon lines stops them chattering: the
+   * first version talked after nearly every event and was judged "fairly
+   * talkative". Returns true if the line played, or was skipped on purpose
+   * (so the caller doesn't fall back to a synth sound).
+   */
+  private chatter(ids: string[], rate: number, delay: number, chance: number, force = false): boolean {
+    if (!force && (Math.random() > chance || this.clock < this.quietUntil)) return true;
+    const ok = this.audio.say(ids, { rate, delay, interrupt: force });
+    if (ok) this.quietUntil = this.clock + delay + RACCOON_QUIET;
+    return ok;
+  }
 
   private setEllie(pose: ElliePose, dur: number): void {
     this.ellie = pose;

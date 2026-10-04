@@ -61,7 +61,8 @@ const SYNTH_SFX: Partial<Record<Sfx, { kind: SfxKind; reverb: number; gain: numb
   'break-glass': { kind: 'break-glass', reverb: 0.3, gain: 0.55 },
   'break-stone': { kind: 'break-stone', reverb: 0.2, gain: 0.7 },
   bonk: { kind: 'bonk', reverb: 0.15, gain: 0.5 },
-  launch: { kind: 'launch', reverb: 0.15, gain: 0.6 },
+  // 'launch' is deliberately NOT here: the synthesised rubber-band twang was
+  // judged worse than the original whoosh, which stays (see play()).
   stretch: { kind: 'stretch', reverb: 0.05, gain: 0.35 },
   boom: { kind: 'boom', reverb: 0.45, gain: 1 },
   pop: { kind: 'pop', reverb: 0.35, gain: 0.7 },

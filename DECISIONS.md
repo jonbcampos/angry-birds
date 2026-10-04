@@ -303,3 +303,16 @@ it's inside a frame.
 Two of the five failed `verify()` on the first try, both placement mistakes: a raccoon placed
 at the wrong floor height, and two raccoons overlapping lookout posts. The check exists to catch
 exactly that.
+
+## 18. Less chatter, and the old launch sound back
+
+From play: the voices are good, but the raccoons are "fairly talkative", and the new
+synthesised launch twang was worse than the original whoosh.
+
+- The launch sound is the original again (it's simply left out of `SYNTH_SFX`).
+- Raccoon lines go through `Cast.chatter`: a 4 s quiet gap after any raccoon line, and most
+  follow-ups are occasional ("'Scuse me!" 40%, "Oopsie!" 35-50%, "Whoaaa!" 25%, "Uh-oh!" 30%).
+- One hello per level (a line or a burp, not a line, a burp and a raspberry), and the bored
+  tease while aiming starts at 6 s and repeats every 12 s, not 3.5 and 6.5.
+
+The burps, the toots and "Missed me!" after a miss stay frequent; they're the jokes.
