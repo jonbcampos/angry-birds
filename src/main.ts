@@ -13,7 +13,7 @@ import { PALETTE } from './render/palette';
 import { Cast } from './render/cast';
 import { Particles } from './render/particles';
 import { loadSprites } from './render/sprites';
-import { drawScene } from './render/scene';
+import { drawScene, drawTitleBackdrop } from './render/scene';
 import {
   drawHud,
   drawPause,
@@ -54,6 +54,7 @@ let introTime = 0;
 /** Seconds since the result panel appeared; buttons wait a moment so a stray tap can't skip it. */
 let resultTime = 0;
 let impactSoundsThisTick = 0;
+let fartClock = 0;
 /** Real seconds of slow motion left, after a blast. */
 let slowmo = 0;
 const BOOM_WORDS = ['BOOM!', 'KABOOM!', 'BANG!', 'KA-BLAM!', 'BOOM!!'];
@@ -246,6 +247,11 @@ function onEvent(e: GameEvent): void {
     case 'stretch':
       audio.play('stretch');
       break;
+    case 'toot':
+      // A whoopee cushion bounced. Harder bounces get the squeakier toot.
+      audio.toot(e.value > 7 ? 'squeak' : 'pfft', 1.15, Math.min(1, e.value / 9));
+      particles.tootPuff(e.x, e.y, 0.22 + Math.min(0.2, e.value * 0.02));
+      break;
     case 'ability':
       if (e.tag === 'split') {
         audio.play('split');
@@ -253,6 +259,11 @@ function onEvent(e: GameEvent): void {
       } else if (e.tag === 'boost') {
         audio.play('boost');
         particles.dust(e.x, e.y, 0.8, '#ffd8a8');
+      } else if (e.tag === 'fart') {
+        // The longest, silliest toot in the game: a rumble, then a squeak.
+        audio.toot('rumble', 0.9, 1);
+        audio.toot('squeak', 1.1, 0.7);
+        particles.toot(e.x, e.y, 0.5, -1);
       } else if (e.tag === 'slam') {
         audio.play('slam');
         particles.sparks(e.x, e.y, 8, '#ffffff');
@@ -331,6 +342,17 @@ function update(dt: number): void {
     scale = 1 - (1 - BOOM_TIME_SCALE) * Math.min(1, k * 1.5);
   }
   state.update(dt * scale);
+
+  // The fart-jet's trail: a cloud out of the nozzle every few frames.
+  const lead = state.flying[0];
+  if (state.phase === 'flight' && state.current === 'whoopee' && state.boostTimer > 0 && lead?.alive) {
+    fartClock -= dt;
+    if (fartClock <= 0) {
+      fartClock = 0.04;
+      const sp = Math.hypot(lead.vx, lead.vy) || 1;
+      particles.tootPuff(lead.x - (lead.vx / sp) * 0.5, lead.y - (lead.vy / sp) * 0.5, 0.3, -lead.vx * 0.05);
+    }
+  }
   state.drainEvents((e) => {
     onEvent(e);
     cast.onEvent(e, state);
@@ -348,7 +370,10 @@ function render(alphaT: number): void {
   ctx.fillRect(-SCREEN.w, -SCREEN.h, SCREEN.w * 3, SCREEN.h * 3);
 
   const t = state.phase === 'paused' || state.phase === 'title' || state.phase === 'select' ? 1 : alphaT;
-  drawScene(ctx, state, t, particles, cast);
+  // The menus sit over the painted title picture if there is one, or over a
+  // live view of level 1's fort if there isn't.
+  const menu = state.phase === 'title' || state.phase === 'select';
+  if (!menu || !drawTitleBackdrop(ctx)) drawScene(ctx, state, t, particles, cast);
 
   switch (state.phase) {
     case 'title':

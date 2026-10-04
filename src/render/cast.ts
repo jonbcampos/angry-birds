@@ -151,6 +151,10 @@ export class Cast {
         this.flinchNear(state, e.x, e.y, e.value * 1.4, 0.8);
         this.setEllie('amazed', 1);
         break;
+      case 'ability':
+        // Even she can't keep a straight face at a fart-jet.
+        if (e.tag === 'fart') this.schedule('ellie', 0.35, -1, 'smug', 1.3, 'ew');
+        break;
       case 'launch':
         this.setEllie('go', 0.5);
         this.aimIdle = 0;

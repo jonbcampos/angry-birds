@@ -208,3 +208,31 @@ screenshot showed whatever happened afterwards. Step and snap in one call.
 **Revisit if:** the raccoon reads too small on a phone. `RACCOON_ART_HEIGHT` scales him
 without touching his collision circle, but past about 2.6 his ears start overlapping the plank
 above.
+
+## 14. Phase 2 and 3 art, painted toots, and the Whoopee Cushion
+
+Thirteen more images: wood, glass and stone (a plank sheet and a block sheet each, four damage
+stages), the slingshot, the whoopee cushion, a day and a dusk meadow, a ground strip, a title
+picture, and the toot clouds. All 22 sheets and stills pass `checkArt()`; the full set is 1.6 MB.
+
+- **Toot clouds are painted on MAGENTA.** They're yellow-green, so a green key would erase them.
+  The loader already keys on whatever colour is in the corners, so nothing changed there; the
+  checker learned the same trick. ART-PLAN.md said toots would stay procedural for exactly this
+  reason. A different key colour was the better answer.
+- **Blocks:** planks are three-sliced so the ends keep their shape at any length, posts are
+  planks rotated, triangles are the block texture clipped, the damage stage replaces
+  procedural cracks, and every painted block gets a crisp 1.3 px outline. Without the outline,
+  pale glass against the pale sky vanished.
+- **The slingshot's band anchors are found, not measured:** the topmost solid pixel in each half
+  of the picture.
+- **Ground** is cropped 7% from the top (the art had a sliver of sky above its grass) and tiled
+  with every other copy mirrored, anchored to the world so a hill's grass lines up with the
+  ground's. Hills are the same ground art, raised.
+- **Levels 11+ are at dusk**, where explosions glow best.
+- **The title picture has no characters.** Ellie and the raccoons are drawn over it from their
+  own sheets, so they're the same Ellie and raccoons as in the game.
+
+The Whoopee Cushion is the rocket's sibling: tap for a slower, floatier jet (`FART_SPEED`,
+`FART_FLOAT`) trailing toot clouds, restitution 0.75 so it ricochets, and a toot on every bounce
+over 2.5 m/s (at most one per 0.18 s, or a single bounce is five toots). It's introduced on its
+own level 15, *Toot Toot!*, rather than slotted earlier, because saves are keyed by level id.

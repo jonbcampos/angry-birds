@@ -4,7 +4,8 @@ import type { GameState } from '../game/state';
 import { LEVELS } from '../game/levels';
 import { isUnlocked, type Save } from '../core/save';
 import { PALETTE, alpha } from '../render/palette';
-import { paintRaccoon, paintToy, roundRect } from '../render/scene';
+import { paintEllie, paintRaccoon, paintToy, roundRect } from '../render/scene';
+import { sprite } from '../render/sprites';
 import { drawText } from './text';
 
 /**
@@ -248,7 +249,16 @@ function panel(ctx: CanvasRenderingContext2D): { x: number; y: number; w: number
 }
 
 export function drawTitle(ctx: CanvasRenderingContext2D, muted: boolean, time: number): void {
-  dim(ctx, 0.35);
+  const painted = sprite('title') !== null;
+  dim(ctx, painted ? 0.12 : 0.35);
+  if (painted) {
+    // Ellie stands by the painted slingshot, cheering now and then.
+    ctx.save();
+    ctx.translate(SCREEN.w * 0.2, SCREEN.h * 0.95);
+    ctx.scale(44, 44);
+    paintEllie(ctx, Math.sin(time * 0.9) > 0.6 ? 'cheer' : 'ready', time, 1, -1.9);
+    ctx.restore();
+  }
   const cx = SCREEN.w / 2;
   const bob = Math.sin(time * 2) * 3;
   drawText(ctx, "ELLIE'S SLINGSHOT", cx + 2, 62 + bob + 2, { size: 30, align: 'center', color: PALETTE.hudShadow });
@@ -270,7 +280,7 @@ export function drawTitle(ctx: CanvasRenderingContext2D, muted: boolean, time: n
 }
 
 export function drawSelect(ctx: CanvasRenderingContext2D, save: Save): void {
-  dim(ctx, 0.6);
+  dim(ctx, sprite('title') ? 0.45 : 0.6);
   drawText(ctx, 'PICK A FORT', SCREEN.w / 2, 24, { size: 18, align: 'center', color: '#ffffff' });
   drawButtons(ctx, selectButtons(save));
 }

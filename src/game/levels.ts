@@ -297,6 +297,22 @@ export const LEVELS: readonly Level[] = [
     b.block(24.5, hill, 1, 'stone');
     b.tnt(24.5, hill + 1);
   }),
+
+  level(15, 'Toot Toot!', ['whoopee', 'whoopee', 'ball', 'whoopee'], 2, (b) => {
+    // A stone wall to bounce over, and wooden forts behind it to ricochet
+    // around inside. The cushion is the bounciest toy, so it keeps going.
+    b.block(14, 0, 1, 'stone');
+    b.block(14, 1, 1, 'stone');
+    b.block(14, 2, 1, 'stone');
+    let top = b.frame(17, 0, 2.4, 2);
+    b.bandit(17, 0);
+    b.bandit(17, top);
+    b.tnt(18.75, 0);
+    top = b.frame(20.5, 0, 2.4, 2.4);
+    b.bandit(20.5, 0);
+    top = b.frame(20.5, top, 2, 1.6);
+    b.bandit(20.5, top);
+  }, 'whoopee'),
 ];
 
 export function levelById(id: number): Level {

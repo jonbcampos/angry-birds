@@ -48,6 +48,7 @@
  * the image and confirming the grid is right.
  */
 const DETACHED = new Map<string, string>([
+  ['fart.motion', 'stink lines float above each cloud, separated by background'],
   // An explosion breaking into separate puffs and sparks is, by design, made
   // of pieces separated by background.
   ['boom.motion', 'late frames are scattered puffs and sparks'],
@@ -85,7 +86,14 @@ function isBlack(r: number, g: number, b: number): boolean {
  * (CELL_INSET in sprites.ts), so the checker ignores the same strips.
  */
 function countBands(data: Uint8ClampedArray, w: number, h: number, black: boolean, cols: number, rows: number): number {
-  const background = black ? isBlack : isKey;
+  // Background is whatever colour the corners are: green, magenta (the toot
+  // clouds, which are green themselves) or black (the additive explosion).
+  const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4];
+  const key = [0, 1, 2].map((c) => corners.reduce((sum, i) => sum + data[i + c]!, 0) / 4);
+  const background = black
+    ? isBlack
+    : (r: number, g: number, b: number): boolean =>
+        Math.hypot(r - key[0]!, g - key[1]!, b - key[2]!) < 110 || isKey(r, g, b);
   const strip = Math.max(3, Math.round(w * 0.006));
   const nearBoundary = (x: number): boolean => {
     for (let c = 0; c <= cols; c++) if (Math.abs(x - (c * w) / cols) <= strip) return true;

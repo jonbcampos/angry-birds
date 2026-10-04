@@ -27,6 +27,17 @@ const KEY_BACKGROUND = [
   'no shadow cast onto the background, no floor, no scenery, no border.',
 ].join(' ');
 
+/**
+ * For the toot clouds, which are green themselves, so a green key would erase
+ * them. The loader keys on whatever colour it finds in the corners, so a
+ * magenta screen needs no special handling there; it only has to be vivid.
+ */
+const MAGENTA_BACKGROUND = [
+  'THE BACKGROUND MUST BE FLAT SOLID MAGENTA, hex #FF00FF, pure saturated magenta-pink,',
+  'covering every pixel that is not a cloud. No white, no gradient, no vignette, no shadow,',
+  'no floor, no scenery, no border.',
+].join(' ');
+
 /** For explosions, which are drawn additively, so black adds nothing. */
 const BLACK_BACKGROUND = [
   'THE BACKGROUND MUST BE PURE SOLID BLACK, hex #000000, every single pixel that is not fire',
@@ -197,6 +208,14 @@ export const PIECES = [
       'a cream muzzle, a stitched smile.',
   },
   {
+    // Flies nozzle-last, drawn along its heading like the rocket, so its
+    // fart-jet comes out of the back.
+    id: 'toy.whoopee',
+    subject:
+      'a pink rubber whoopee cushion puffed up ROUND like a ball, seen from the side, its short ' +
+      'nozzle pointing LEFT, a happy little face printed on it. Cute and silly.',
+  },
+  {
     id: 'toy.firecracker',
     subject:
       'a round cartoon cherry-bomb firecracker toy, deep purple with little gold stars, a short ' +
@@ -246,6 +265,140 @@ export const PIECES = [
   },
 ];
 
+// --- Toot clouds ----------------------------------------------------------------------
+PIECES.push({
+  // Eight different clouds, not an animation: each toot picks one at random and
+  // the game makes it drift, wobble, grow and fade.
+  id: 'fart.motion',
+  aspect: '16:9',
+  size: '2K',
+  background: 'magenta',
+  sheet: { cols: 4, rows: 2, align: 'center', rowIds: ['clouds', 'clouds'] },
+  subject:
+    'EIGHT different cartoon fart clouds, one in each cell of a grid of 4 columns by 2 rows: EXACTLY ' +
+    'eight clouds, no more and no fewer, each centred in its own cell with clear magenta space all ' +
+    'around it. Each is a puffy, lumpy little cloud made of three to five round puffs, coloured a ' +
+    'silly pale yellow-green with a slightly darker yellow-green outline, with two or three wavy ' +
+    '"stink lines" rising from the top. Some are small and round, some long and trailing, one has a ' +
+    'tiny cheeky face. Funny, not gross. No lines, borders or dividers between the cells.',
+});
+
+// --- Phase 2: materials ------------------------------------------------------------
+// Each material is a plank and a block, both in four damage stages, both drawn
+// so they read at about eight pixels thick: bold colour, thick outline.
+// ART-PLAN.md N3 has why blocks are textures stretched to fit, not stickers.
+
+const MATERIAL_LOOK = {
+  wood: 'honey-coloured wood with a few long grain lines and one small knot, a dark brown outline',
+  glass:
+    'frosted pale-blue OPAQUE glass like a thick block of ice, with one soft white streak of shine. ' +
+    'NOT transparent: nothing is visible through it, and it has no green tint at all',
+  stone: 'light grey cut stone with a few darker speckles and slightly rounded corners, a dark grey outline',
+};
+
+const DAMAGE =
+  'The first is brand new. The second has a few small cracks. The third is badly cracked and ' +
+  'chipped. The fourth is about to break, with a deep crack right across it.';
+
+for (const [mat, look] of Object.entries(MATERIAL_LOOK)) {
+  PIECES.push(
+    {
+      id: `${mat}.plank`,
+      aspect: '21:9',
+      size: '2K',
+      kind: 'material',
+      sheet: { cols: 1, rows: 4, align: 'center', rowIds: ['plank', 'plank', 'plank', 'plank'] },
+      subject:
+        `FOUR copies of the SAME long plank of ${look}. Each plank lies HORIZONTALLY and spans ` +
+        'almost the full width of the picture; they are stacked one above another in a single ' +
+        'column with clear green space between them. EXACTLY FOUR planks, no more, no fewer. Each ' +
+        `plank is a long thin bar about nine times as long as it is tall, with square ends. ${DAMAGE} ` +
+        'Read top to bottom.',
+    },
+    {
+      id: `${mat}.block`,
+      aspect: '1:1',
+      size: '1K',
+      kind: 'material',
+      sheet: { cols: 2, rows: 2, align: 'center', rowIds: ['block', 'block'] },
+      subject:
+        `FOUR copies of the SAME square block of ${look}, one in each quadrant of a 2 by 2 grid, ` +
+        `seen straight on, each the same size. ${DAMAGE} Read left to right, top row first.`,
+    },
+  );
+}
+
+PIECES.push({
+  // The game draws the rubber bands itself, between the two fork tips, which
+  // the loader finds by itself: the topmost pixel in each half of the picture.
+  id: 'slingshot',
+  aspect: '3:4',
+  subject:
+    'a big wooden Y-shaped slingshot standing upright, seen side-on: a thick trunk at the bottom ' +
+    'splitting into two forked arms that curve up and slightly outward, a leather wrap around the ' +
+    'trunk, rounded fork tips. NO rubber bands, NO pouch, nothing at all between the forks. The ' +
+    'bottom of the trunk is cut flat.',
+  flat: false,
+});
+
+// --- Phase 3: the world ----------------------------------------------------------------
+
+const BACKDROP =
+  'A FLAT side-on GAME BACKGROUND for a 2D game, no perspective, no vanishing point. Across the ' +
+  'lower third, gentle rolling hills and a distant soft tree line, hazy and pale with distance. ' +
+  'The bottom tenth is plain flat grass colour. Calm and uncluttered, with lots of open sky. ' +
+  'Nothing square, boxy or block-shaped anywhere: no fences, houses, crates, walls or towers. ' +
+  'No animals, no people, no text.';
+
+PIECES.push(
+  {
+    // Levels 1-10. A shape in the background that looks like part of a fort
+    // gets aimed at, so "nothing block-shaped" is a gameplay rule.
+    id: 'meadow',
+    aspect: '21:9',
+    size: '2K',
+    background: 'none',
+    subject: `${BACKDROP} A bright sunny blue sky with a few soft fluffy white clouds.`,
+  },
+  {
+    // Levels 11-15, the TNT-heavy ones. Explosions look their best at dusk.
+    id: 'meadow.dusk',
+    aspect: '21:9',
+    size: '2K',
+    background: 'none',
+    subject:
+      `${BACKDROP} A warm sunset sky in peach, pink and lavender with a few glowing clouds, a low ` +
+      'golden sun near the horizon, the hills in soft purple-blue tones.',
+  },
+  {
+    // Tiled across the level with every other copy mirrored, which hides the
+    // seam without asking the model for a seamless tile.
+    id: 'ground',
+    aspect: '21:9',
+    size: '1K',
+    background: 'none',
+    subject:
+      'A side-on cross-section of the ground filling the ENTIRE picture edge to edge, like a 2D game ' +
+      'ground tile: a strip of bright green grass along the very top edge with little grass blades ' +
+      'and a few tiny flowers, and below it rich brown soil with small pebbles, a few roots and ' +
+      'darker layers. Flat and side-on, no perspective, no sky.',
+  },
+  {
+    // No characters: Ellie and the raccoons are drawn over it from their own
+    // sheets, so they are the same Ellie and raccoons as in the game.
+    id: 'title',
+    aspect: '16:9',
+    size: '2K',
+    background: 'none',
+    subject:
+      "The cover picture of a children's game, a sunny meadow seen side-on: on the right, on a small " +
+      'grassy hill, a wobbly fort built of stacked wooden toy blocks and planks with a little red ' +
+      'flag on top; on the far left, a big wooden Y-shaped slingshot. The whole CENTRE of the ' +
+      'picture is open blue sky with a few soft clouds, left empty for a title. No people, no ' +
+      'animals, no text.',
+  },
+);
+
 // --- Prompt assembly --------------------------------------------------------------
 
 /**
@@ -253,6 +406,15 @@ export const PIECES = [
  * lost a whole background to a `.replace()` that silently stopped matching.
  */
 export function promptFor(piece) {
+  if (piece.background === 'magenta') {
+    return [
+      MAGENTA_BACKGROUND,
+      piece.subject,
+      'There is NO magenta or pink anywhere in the clouds themselves.',
+      `${DRAW_STYLE}, clean crisp edges suitable for cutting out against pure magenta #FF00FF.`,
+      MAGENTA_BACKGROUND,
+    ].join(' ');
+  }
   if (piece.background === 'black') {
     const { cols, rows } = piece.sheet;
     return [
@@ -266,6 +428,23 @@ export function promptFor(piece) {
       BLACK_BACKGROUND,
     ].join(' ');
   }
+  if (piece.background === 'none') {
+    return `${piece.subject} ${DRAW_STYLE}. This is a full-bleed background image: it must fill the entire frame edge to edge, with no border and no chroma-key colour anywhere.`;
+  }
+  if (piece.kind === 'material') {
+    // Not a character: the grid rules about poses don't apply, but the
+    // background, flat light and no-green rules all do.
+    return [
+      KEY_BACKGROUND,
+      piece.subject,
+      'Draw NO lines, borders or dividers between them: one continuous flat #00FF00 background.',
+      'Bold simple colours and a thick dark outline: this is drawn only a few pixels thick in the',
+      'game, so fine detail is wasted.',
+      FLAT_LIGHT,
+      NO_GREEN,
+      `${DRAW_STYLE}, ${CUT_OUT}`,
+    ].join(' ');
+  }
   if (piece.sheet) {
     const { cols, rows } = piece.sheet;
     return [
@@ -277,12 +456,12 @@ export function promptFor(piece) {
       `${DRAW_STYLE}, ${CUT_OUT}`,
     ].join(' ');
   }
-  // A single still. Every still in this game is a toy that spins.
+  // A single still: a toy that spins (flat-lit), or the slingshot (which doesn't).
   return [
     KEY_BACKGROUND,
     `Subject: ${piece.subject}`,
     'A single centred subject filling most of the frame.',
-    FLAT_LIGHT,
+    piece.flat === false ? '' : FLAT_LIGHT,
     NO_GREEN,
     `${DRAW_STYLE}, ${CUT_OUT}`,
   ].join(' ');

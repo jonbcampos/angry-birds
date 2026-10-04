@@ -32,6 +32,10 @@ import {
 import {
   BOOST_FLOAT,
   BOOST_SPEED,
+  BOUNCE_TOOT_GAP,
+  BOUNCE_TOOT_SPEED,
+  FART_FLOAT,
+  FART_SPEED,
   MAT,
   MATERIALS,
   POPPER_FUSE,
@@ -63,6 +67,7 @@ export type EventKind =
   | 'boom'
   | 'stretch'
   | 'shotover'
+  | 'toot'
   | 'won'
   | 'lost';
 
@@ -131,6 +136,9 @@ export class GameState {
   stars = 0;
   winTimer = -1;
   loseTimer = -1;
+
+  /** When each whoopee cushion last tooted, by body id, so a bounce is one toot, not five. */
+  private readonly lastToot = new Float64Array(MAX_BODIES);
 
   /** Which toy each body is, by body id. Only meaningful for tag 'shot'. */
   readonly shotKind: ShotKind[] = new Array<ShotKind>(MAX_BODIES).fill('ball');
@@ -496,6 +504,16 @@ export class GameState {
         this.boostTimer = BOOST_FLOAT;
         break;
       }
+      case 'fart': {
+        // A fart-jet: the rocket's boost, slower and floatier. The trail of
+        // clouds and the sound are the renderer's job (see main.ts).
+        const speed = Math.hypot(lead.vx, lead.vy) || 1;
+        lead.vx = (lead.vx / speed) * FART_SPEED;
+        lead.vy = (lead.vy / speed) * FART_SPEED;
+        lead.gravityScale = 0;
+        this.boostTimer = FART_FLOAT;
+        break;
+      }
       case 'slam':
         lead.vx *= 0.15;
         lead.vy = SLAM_SPEED;
@@ -519,6 +537,14 @@ export class GameState {
       const im = w.impacts[i]!;
       this.damage(im.a, im.b, im.energy);
       this.damage(im.b, im.a, im.energy);
+
+      // Whoopee cushions toot on every decent bounce.
+      for (const body of [im.a, im.b]) {
+        if (body.tag !== 'shot' || this.shotKind[body.id] !== 'whoopee') continue;
+        if (im.speed < BOUNCE_TOOT_SPEED || this.time - this.lastToot[body.id]! < BOUNCE_TOOT_GAP) continue;
+        this.lastToot[body.id] = this.time;
+        this.emit('toot', im.x, im.y, im.speed);
+      }
 
       const lead = this.flying[0];
       if (this.phase === 'flight' && lead && (im.a === lead || im.b === lead)) {

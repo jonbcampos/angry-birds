@@ -6,12 +6,30 @@
     "toy.ducks",
     "toy.rocket",
     "toy.bear",
+    "toy.whoopee",
     "toy.firecracker",
     "tnt.motion",
-    "boom.motion"
+    "boom.motion",
+    "fart.motion",
+    "wood.plank",
+    "wood.block",
+    "glass.plank",
+    "glass.block",
+    "stone.plank",
+    "stone.block",
+    "slingshot",
+    "meadow",
+    "meadow.dusk",
+    "ground",
+    "title"
   ],
   "ext": "jpg",
-  "opaque": [],
+  "opaque": [
+    "meadow",
+    "meadow.dusk",
+    "ground",
+    "title"
+  ],
   "additive": [
     "boom.motion"
   ],
@@ -55,6 +73,75 @@
       "rowIds": [
         "fx",
         "fx"
+      ]
+    },
+    "fart.motion": {
+      "cols": 4,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "clouds",
+        "clouds"
+      ]
+    },
+    "wood.plank": {
+      "cols": 1,
+      "rows": 4,
+      "align": "center",
+      "rowIds": [
+        "plank",
+        "plank",
+        "plank",
+        "plank"
+      ]
+    },
+    "wood.block": {
+      "cols": 2,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "block",
+        "block"
+      ]
+    },
+    "glass.plank": {
+      "cols": 1,
+      "rows": 4,
+      "align": "center",
+      "rowIds": [
+        "plank",
+        "plank",
+        "plank",
+        "plank"
+      ]
+    },
+    "glass.block": {
+      "cols": 2,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "block",
+        "block"
+      ]
+    },
+    "stone.plank": {
+      "cols": 1,
+      "rows": 4,
+      "align": "center",
+      "rowIds": [
+        "plank",
+        "plank",
+        "plank",
+        "plank"
+      ]
+    },
+    "stone.block": {
+      "cols": 2,
+      "rows": 2,
+      "align": "center",
+      "rowIds": [
+        "block",
+        "block"
       ]
     }
   }

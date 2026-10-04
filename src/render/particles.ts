@@ -346,6 +346,8 @@ export class Particles {
   tootPuff(x: number, y: number, size: number, vx = 0): void {
     const p = this.spawn(PKind.Toot, x, y, vx + rand(-0.3, 0.3), rand(-0.9, -0.4), size * rand(0.8, 1.2), rand(1.1, 1.6), '#d4e157', 0, 1.5);
     p.bounces = false;
+    // Which of the eight painted clouds to use, if they're loaded.
+    p.stage = Math.floor(Math.random() * 8);
     p.vr = rand(2.5, 4.5);
   }
 

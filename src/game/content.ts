@@ -57,10 +57,10 @@ export const MAT = {
 
 // --- Toys -------------------------------------------------------------------
 
-export type ShotKind = 'ball' | 'ducks' | 'rocket' | 'bear' | 'popper';
+export type ShotKind = 'ball' | 'ducks' | 'rocket' | 'bear' | 'popper' | 'whoopee';
 
 /** What tapping mid-flight does. */
-export type Ability = 'none' | 'split' | 'boost' | 'slam' | 'pop';
+export type Ability = 'none' | 'split' | 'boost' | 'slam' | 'pop' | 'fart';
 
 export interface ShotDef {
   kind: ShotKind;
@@ -120,6 +120,19 @@ export const SHOTS: Record<ShotKind, ShotDef> = {
     ability: 'slam',
     vs: { wood: 1.2, glass: 1, stone: 2 },
   },
+  whoopee: {
+    // The funniest thing in the game, and a sibling of the rocket underneath:
+    // a straight-line jet on tap, plus the bounciest body of any toy so it
+    // ricochets around a fort tooting on every hit.
+    kind: 'whoopee',
+    name: 'Whoopee Cushion',
+    hint: 'Tap in the air for a FART-JET! Toots on every bounce.',
+    radius: 0.34,
+    density: 6,
+    restitution: 0.75,
+    ability: 'fart',
+    vs: { wood: 2, glass: 1.2, stone: 0.5 },
+  },
   popper: {
     kind: 'popper',
     name: 'Firecracker',
@@ -136,6 +149,12 @@ export const SHOTS: Record<ShotKind, ShotDef> = {
 export const BOOST_SPEED = 30;
 /** Seconds the rocket ignores gravity after boosting, so the zoom reads as a straight line. */
 export const BOOST_FLOAT = 0.35;
+/** The whoopee cushion's fart-jet: a bit slower than the rocket and floats a bit longer. */
+export const FART_SPEED = 25;
+export const FART_FLOAT = 0.55;
+/** A whoopee cushion hitting something at least this fast toots, at most this often. */
+export const BOUNCE_TOOT_SPEED = 2.5;
+export const BOUNCE_TOOT_GAP = 0.18;
 /** The teddy's downward speed after a stomp, m/s. */
 export const SLAM_SPEED = 24;
 /** Fan angle between split ducks, radians. */

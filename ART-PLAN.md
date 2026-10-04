@@ -3,10 +3,8 @@
 Generated art for *Ellie's Slingshot*, using the same Gemini pipeline that brought
 `../tower-defense` to life.
 
-> **Status: Phase 1 is done**: the raccoons, Ellie, the five toys, the TNT crate and the explosion
-> flipbook are generated and in the game (DECISIONS.md 13). Phase 1 turned out to be nine images,
-> not twelve. Phases 2 and 3 (materials, slingshot, backdrop, ground, title) and the Whoopee
-> Cushion are still plans.
+> **Status: Phases 1-3 are done, plus the Whoopee Cushion and painted toot clouds** (DECISIONS.md
+> 13 and 14): 22 images in total. Still open: the boss raccoon and the smoke sheet.
 
 It has two halves:
 

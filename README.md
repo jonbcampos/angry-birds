@@ -16,6 +16,7 @@ or holding her nose and giggling.
 | **Rubber Ducks** | split into three | glass |
 | **Toy Rocket** | ZOOM in a straight line | wood |
 | **Big Teddy** | stomp straight down | stone |
+| **Whoopee Cushion** | FART-JET: zooms in a straight line trailing toot clouds (and it toots on every bounce) | wood |
 | **Firecracker** | go BOOM, a TNT-sized blast (it also goes off by itself a second after it hits) | everything nearby |
 
 Forts are made of **wood** (splits into halves), **glass** (shatters), **stone** (heavy, tough,
@@ -36,7 +37,7 @@ solid knock sets a crate off. Each blast:
 - shakes the screen hard, slows time briefly so you can watch it all fly, and plays a deep layered
   boom
 
-Fourteen levels. The first three are always open, and beating a level opens the next. Fourth in a
+Fifteen levels. The first three are always open, and beating a level opens the next. Fourth in a
 set with [Flappy Unicorn](https://jonbcampos.github.io/flappy-unicorn/),
 [Ellie's Rainbow Run](https://jonbcampos.github.io/runner-game/) and
 [Unicorn Squeeze Squad](https://jonbcampos.github.io/tower-defense/). It's built the same way: TypeScript, a 2D canvas, no
@@ -44,7 +45,7 @@ engine, no runtime dependencies, and no audio files.
 
 ## Art
 
-The raccoons, Ellie, the toys, the TNT crates and the explosions are painted by Google Gemini
+The raccoons, Ellie, the toys, the blocks, the slingshot, the TNT, the explosions, the toot clouds, the meadow (day and dusk), the ground and the title picture are painted by Google Gemini
 from the prompts in `scripts/art-manifest.mjs`; ART-PLAN.md is the plan behind them. All art is
 optional. Delete `public/sprites/` and every piece falls back to its hand-drawn version.
 

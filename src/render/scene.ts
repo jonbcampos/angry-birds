@@ -22,7 +22,7 @@ const vel = { x: 0, y: 0 };
 
 export function drawScene(ctx: CanvasRenderingContext2D, state: GameState, alphaT: number, particles: Particles, cast: Cast): void {
   px = 1 / camera.scale;
-  drawBackdrop(ctx, state.time);
+  drawBackdrop(ctx, state.time, state.level.id);
   drawGround(ctx);
 
   const w = state.world;
@@ -77,7 +77,40 @@ function drawScorch(ctx: CanvasRenderingContext2D, particles: Particles): void {
 
 // --- Backdrop ---------------------------------------------------------------
 
-function drawBackdrop(ctx: CanvasRenderingContext2D, t: number): void {
+/** Levels from here on are at dusk: the TNT-heavy end of the game, where booms glow best. */
+const DUSK_FROM_LEVEL = 11;
+
+/**
+ * Draw an image to COVER a box, keeping its aspect: scaled up until both sides
+ * fit, cropped evenly from whichever side is too long. `bottom` pins the
+ * image's bottom edge to the box's bottom instead of centring vertically.
+ */
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement, x: number, y: number, w: number, h: number, bottom = false): void {
+  const scale = Math.max(w / img.width, h / img.height);
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const smoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img, x + (w - dw) / 2, bottom ? y + h - dh : y + (h - dh) / 2, dw, dh);
+  ctx.imageSmoothingEnabled = smoothing;
+}
+
+/** The title picture, covering the whole frame, for the menus. False if there isn't one. */
+export function drawTitleBackdrop(ctx: CanvasRenderingContext2D): boolean {
+  const art = sprite('title');
+  if (!art) return false;
+  drawCover(ctx, art, -2, -2, SCREEN.w + 4, SCREEN.h + 4, true);
+  return true;
+}
+
+function drawBackdrop(ctx: CanvasRenderingContext2D, t: number, levelId: number): void {
+  const art = sprite(levelId >= DUSK_FROM_LEVEL ? 'meadow.dusk' : 'meadow') ?? sprite('meadow');
+  if (art) {
+    // Bottom-aligned a little below the ground line: the picture's bottom
+    // tenth is plain grass, which the ground strip covers.
+    drawCover(ctx, art, -4, -4, SCREEN.w + 8, camera.groundY + 14, true);
+    return;
+  }
   const g = ctx.createLinearGradient(0, 0, 0, SCREEN.h);
   g.addColorStop(0, PALETTE.skyTop);
   g.addColorStop(1, PALETTE.skyBottom);
@@ -129,7 +162,54 @@ function hills(ctx: CanvasRenderingContext2D, base: number, height: number, freq
   ctx.fill();
 }
 
+/**
+ * The ground art's top few percent is a sliver of sky above the grass; it is
+ * cropped off so the grass blades, not the sky, poke up over the ground line.
+ */
+const GROUND_CROP_TOP = 0.07;
+/** How tall one tile of the ground art is drawn, in virtual px. */
+const GROUND_TILE_H = 92;
+/** How far the grass blades reach above the ground line, px. */
+const GROUND_BLADES = 6;
+
+/**
+ * Fill a box with the ground art, tiled sideways with every other copy
+ * mirrored. Mirroring hides the seam without asking the model for a seamless
+ * tile, which it is unreliable at. The tiling is anchored to the WORLD, not the
+ * box, so a ledge's grass lines up with the ground's.
+ */
+function drawGroundArt(ctx: CanvasRenderingContext2D, art: HTMLCanvasElement, x: number, y: number, w: number, h: number): void {
+  const srcY = art.height * GROUND_CROP_TOP;
+  const srcH = art.height - srcY;
+  const tileW = (GROUND_TILE_H * art.width) / srcH;
+  const originX = camera.originX + camera.shakeX;
+  let i = Math.floor((x - originX) / tileW);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y - GROUND_BLADES, w, h + GROUND_BLADES);
+  ctx.clip();
+  ctx.imageSmoothingEnabled = true;
+  for (let tx = originX + i * tileW; tx < x + w; tx += tileW, i++) {
+    ctx.save();
+    if (i % 2 !== 0) {
+      ctx.translate(tx + tileW, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(art, 0, srcY, art.width, srcH, 0, y - GROUND_BLADES, tileW, GROUND_TILE_H);
+    } else {
+      ctx.drawImage(art, 0, srcY, art.width, srcH, tx, y - GROUND_BLADES, tileW, GROUND_TILE_H);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 function drawGround(ctx: CanvasRenderingContext2D): void {
+  const art = sprite('ground');
+  if (art) {
+    const y = camera.groundY + camera.shakeY;
+    drawGroundArt(ctx, art, -20, y, SCREEN.w + 40, SCREEN.h - y + 20);
+    return;
+  }
   const y = camera.groundY + camera.shakeY;
   ctx.fillStyle = PALETTE.dirt;
   ctx.fillRect(-20, y, SCREEN.w + 40, SCREEN.h - y + 20);
@@ -152,6 +232,21 @@ function drawLedge(ctx: CanvasRenderingContext2D, b: Body): void {
   const y0 = sy(b.y - hh);
   const w = hw * 2 * camera.scale;
   const h = hh * 2 * camera.scale;
+  const art = sprite('ground');
+  if (art) {
+    // A hill is a raised piece of the same ground: grass on top, soil below,
+    // and a dark edge so it reads as a solid step rather than a painted patch.
+    drawGroundArt(ctx, art, x0, y0, w, h + 2);
+    ctx.strokeStyle = 'rgba(60,35,15,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0 + 4);
+    ctx.lineTo(x0, y0 + h + 2);
+    ctx.moveTo(x0 + w, y0 + 4);
+    ctx.lineTo(x0 + w, y0 + h + 2);
+    ctx.stroke();
+    return;
+  }
   ctx.fillStyle = PALETTE.ledge;
   ctx.fillRect(x0, y0, w, h + 2);
   ctx.fillStyle = PALETTE.dirtDark;
@@ -230,7 +325,75 @@ function drawOffscreen(ctx: CanvasRenderingContext2D, state: GameState): void {
 const FORK_L = { x: SLING_X - 0.32, y: SLING_Y - 0.2 };
 const FORK_R = { x: SLING_X + 0.3, y: SLING_Y - 0.25 };
 
+/** The painted slingshot's height, metres: its fork tips sit just above the pouch's rest. */
+const SLING_ART_HEIGHT = 2.6;
+
+/**
+ * Where the fork tips are in the slingshot art, as fractions of its content
+ * box, found by looking rather than measured by hand: the topmost solid pixel
+ * in each half of the picture. Cached per image.
+ */
+const tipCache = new WeakMap<HTMLCanvasElement, { l: number; r: number; ly: number; ry: number }>();
+function forkTips(art: HTMLCanvasElement): { l: number; r: number; ly: number; ry: number } {
+  const cached = tipCache.get(art);
+  if (cached) return cached;
+  const b = frameBounds(art);
+  const tips = { l: 0.15, r: 0.85, ly: 0, ry: 0 };
+  const ctx = art.getContext('2d', { willReadFrequently: true });
+  if (ctx) {
+    try {
+      const data = ctx.getImageData(b.x, b.y, b.w, b.h).data;
+      for (const side of ['l', 'r'] as const) {
+        const x0 = side === 'l' ? 0 : Math.floor(b.w / 2);
+        const x1 = side === 'l' ? Math.floor(b.w / 2) : b.w;
+        search: for (let y = 0; y < b.h; y++) {
+          let sum = 0;
+          let n = 0;
+          for (let x = x0; x < x1; x++) {
+            if (data[(y * b.w + x) * 4 + 3]! > 160) {
+              sum += x;
+              n++;
+            }
+          }
+          if (n > 3) {
+            // A few pixels down from the very top, so the band ties onto wood, not air.
+            tips[side] = sum / n / b.w;
+            if (side === 'l') tips.ly = (y + b.h * 0.03) / b.h;
+            else tips.ry = (y + b.h * 0.03) / b.h;
+            break search;
+          }
+        }
+      }
+    } catch {
+      // Unreadable: keep the defaults.
+    }
+  }
+  tipCache.set(art, tips);
+  return tips;
+}
+
 function drawSlingBack(ctx: CanvasRenderingContext2D): void {
+  const art = sprite('slingshot');
+  if (art) {
+    // Sized so the fork tips land just above the pouch's resting point, then
+    // the band anchors are moved to wherever the art's tips actually are.
+    const b = frameBounds(art);
+    const tips = forkTips(art);
+    const h = SLING_ART_HEIGHT;
+    const w = (h * b.w) / b.h;
+    const left = SLING_X - w / 2;
+    const top = -h;
+    FORK_L.x = left + tips.l * w;
+    FORK_L.y = top + tips.ly * h;
+    FORK_R.x = left + tips.r * w;
+    FORK_R.y = top + tips.ry * h;
+    ctx.save();
+    ctx.translate(sx(0), sy(0));
+    ctx.scale(camera.scale, camera.scale);
+    drawFitted(ctx, art, left, top, w, h);
+    ctx.restore();
+    return;
+  }
   ctx.lineCap = 'round';
   // Trunk and the back (left) arm.
   ctx.strokeStyle = PALETTE.slingWoodDark;
@@ -270,6 +433,9 @@ function drawPouch(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.fillStyle = PALETTE.band;
   ctx.fillRect(sx(pxw - 0.25), sy(pyw) - 1.5, 0.45 * camera.scale, 3);
 
+  // The hand-drawn slingshot's front arm goes over the toy. The painted one is
+  // a single picture behind it, so there's nothing to draw here.
+  if (sprite('slingshot')) return;
   ctx.strokeStyle = PALETTE.slingWoodDark;
   ctx.lineWidth = 0.22 * camera.scale;
   line(ctx, SLING_X, SLING_Y + 0.9, FORK_R.x, FORK_R.y);
@@ -582,6 +748,11 @@ function drawBlock(ctx: CanvasRenderingContext2D, b: Body, t: number): void {
   const hh = isBox ? Math.abs(s.vy[2]!) : 0;
   const m = b.material;
 
+  if (drawBlockArt(ctx, b, isBox, hw, hh)) {
+    ctx.restore();
+    return;
+  }
+
   if (m === MAT.wood) {
     ctx.fillStyle = PALETTE.woodA;
     polyPath(ctx, b);
@@ -648,6 +819,116 @@ function drawBlock(ctx: CanvasRenderingContext2D, b: Body, t: number): void {
 
   drawCracks(ctx, b, hw || 0.3, hh || 0.3);
   ctx.restore();
+}
+
+const MATERIAL_ART: Record<number, string> = {
+  [MAT.wood]: 'wood',
+  [MAT.glass]: 'glass',
+  [MAT.stone]: 'stone',
+};
+
+/**
+ * Generated block art, if there is any for this material. Returns false to
+ * fall back to the hand-drawn block. ART-PLAN.md N3:
+ *
+ *  - Anything at least twice as long as it is thick is a PLANK, drawn in three
+ *    slices so its ends keep their shape however long it is. A post is a plank
+ *    turned upright.
+ *  - Anything squarer is the BLOCK texture, stretched to fit.
+ *  - A triangle is the block texture clipped to the triangle.
+ *  - The damage stage, not procedural cracks, shows how hurt it is.
+ */
+function drawBlockArt(ctx: CanvasRenderingContext2D, b: Body, isBox: boolean, hw: number, hh: number): boolean {
+  const name = MATERIAL_ART[b.material];
+  if (!name) return false;
+  const hurt = b.maxHp > 0 && isFinite(b.maxHp) ? 1 - b.hp / b.maxHp : 0;
+  const stage = hurt <= 0.02 ? 0 : hurt < 0.35 ? 1 : hurt < 0.7 ? 2 : 3;
+  const glass = b.material === MAT.glass;
+
+  if (isBox && Math.max(hw, hh) >= Math.min(hw, hh) * 2) {
+    const planks = spriteFrames(`${name}.plank`);
+    const frame = planks?.[stage];
+    if (!frame) return false;
+    ctx.save();
+    if (glass) ctx.globalAlpha = 0.96;
+    if (hh > hw) ctx.rotate(Math.PI / 2);
+    drawThreeSlice(ctx, frame, Math.max(hw, hh), Math.min(hw, hh));
+    ctx.restore();
+    outlineBox(ctx, b.material, hw, hh);
+    return true;
+  }
+
+  const blocks = spriteFrames(`${name}.block`);
+  const frame = blocks?.[stage];
+  if (!frame) return false;
+  ctx.save();
+  if (glass) ctx.globalAlpha = 0.96;
+  if (isBox) {
+    drawFitted(ctx, frame, -hw, -hh, hw * 2, hh * 2);
+    ctx.restore();
+    outlineBox(ctx, b.material, hw, hh);
+    return true;
+  } else if (b.shape.kind === 'poly') {
+    // Triangle: clip, then fill its bounding box with the block texture.
+    polyPath(ctx, b);
+    ctx.clip();
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < b.shape.vx.length; i++) {
+      minX = Math.min(minX, b.shape.vx[i]!);
+      maxX = Math.max(maxX, b.shape.vx[i]!);
+      minY = Math.min(minY, b.shape.vy[i]!);
+      maxY = Math.max(maxY, b.shape.vy[i]!);
+    }
+    drawFitted(ctx, frame, minX, minY, maxX - minX, maxY - minY);
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = b.material === MAT.stone ? PALETTE.stoneEdge : PALETTE.woodEdge;
+    ctx.lineWidth = 1.5 * px;
+    polyPath(ctx, b);
+    ctx.stroke();
+  }
+  ctx.restore();
+  return true;
+}
+
+/**
+ * A crisp outline over the painted texture. At phone size a plank is a handful
+ * of pixels thick, the art's own outline is resampled to mush, and pale glass
+ * against a pale sky disappeared entirely without it.
+ */
+function outlineBox(ctx: CanvasRenderingContext2D, material: number, hw: number, hh: number): void {
+  ctx.strokeStyle =
+    material === MAT.glass ? '#2f7fae' : material === MAT.stone ? PALETTE.stoneEdge : PALETTE.woodEdge;
+  ctx.lineWidth = 1.3 * px;
+  ctx.strokeRect(-hw, -hh, hw * 2, hh * 2);
+}
+
+/**
+ * Draw a horizontal plank of half-length `L` and half-thickness `T`: both end
+ * caps at their natural proportion, the middle stretched. Without this a 6m
+ * lintel would stretch its rounded ends into long smears and a 0.5m stub
+ * would squash them flat.
+ */
+function drawThreeSlice(ctx: CanvasRenderingContext2D, frame: HTMLCanvasElement, L: number, T: number): void {
+  const b = frameBounds(frame);
+  const scale = (T * 2) / b.h;
+  let capSrc = Math.min(b.w * 0.2, b.h * 1.4);
+  let capDst = capSrc * scale;
+  if (capDst * 2 > L * 2) {
+    capDst = L;
+    capSrc = capDst / scale;
+  }
+  const smoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = true;
+  const midSrc = b.w - capSrc * 2;
+  const midDst = L * 2 - capDst * 2;
+  ctx.drawImage(frame, b.x, b.y, capSrc, b.h, -L, -T, capDst, T * 2);
+  if (midDst > 0 && midSrc > 0) ctx.drawImage(frame, b.x + capSrc, b.y, midSrc, b.h, -L + capDst, -T, midDst, T * 2);
+  ctx.drawImage(frame, b.x + b.w - capSrc, b.y, capSrc, b.h, L - capDst, -T, capDst, T * 2);
+  ctx.imageSmoothingEnabled = smoothing;
 }
 
 /**
@@ -1183,7 +1464,9 @@ export function paintToy(
     // Same rotation rules as the hand-drawn toys below; the rocket's flame
     // stays procedural, drawn first so the rocket sits on top of it.
     let angle = spin;
-    if (kind === 'rocket') {
+    if (kind === 'whoopee') {
+      angle = heading;
+    } else if (kind === 'rocket') {
       angle = heading;
       if (boosting) {
         ctx.save();
@@ -1325,6 +1608,33 @@ export function paintToy(
       ctx.beginPath();
       ctx.arc(0, r * 0.62, r * 0.12, 0, Math.PI * 2);
       ctx.fill();
+      break;
+    }
+    case 'whoopee': {
+      // Hand-drawn fallback: a pink cushion, nozzle trailing behind, smiling.
+      ctx.rotate(heading);
+      ctx.fillStyle = '#ff8fb8';
+      ctx.beginPath();
+      ctx.ellipse(r * 0.1, 0, r, r * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e8669a';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.8, -r * 0.18);
+      ctx.lineTo(-r * 1.35, -r * 0.25);
+      ctx.lineTo(-r * 1.35, r * 0.25);
+      ctx.lineTo(-r * 0.8, r * 0.18);
+      ctx.fill();
+      ctx.fillStyle = '#3a1020';
+      ctx.beginPath();
+      ctx.arc(r * 0.25, -r * 0.2, r * 0.1, 0, Math.PI * 2);
+      ctx.arc(r * 0.6, -r * 0.2, r * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#3a1020';
+      ctx.lineWidth = r * 0.08;
+      ctx.beginPath();
+      ctx.arc(r * 0.42, r * 0.05, r * 0.22, 0.3, Math.PI - 0.3);
+      ctx.stroke();
+      shine(ctx, r);
       break;
     }
     case 'popper': {
@@ -1491,6 +1801,23 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particles): voi
         // Three lobes, wobbling as they rise, with a pair of stink lines.
         const a = 0.75 * Math.min(1, f * 2);
         const wob = Math.sin(p.rot) * 0.12 * camera.scale;
+        const clouds = spriteFrames('fart.clouds');
+        if (clouds) {
+          // A painted cloud, chosen per puff, wobbling, rising and fading.
+          const frame = clouds[p.stage % clouds.length]!;
+          const b = frameBounds(frame);
+          const h = s * 3.2;
+          const w = (h * b.w) / b.h;
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, f * 2) * 0.92;
+          ctx.translate(x + wob, y);
+          ctx.rotate(Math.sin(p.rot * 0.7) * 0.12);
+          // Tails trail behind: flip clouds drifting left.
+          if (p.vx < -0.2) ctx.scale(-1, 1);
+          drawFitted(ctx, frame, -w / 2, s * 0.8 - h, w, h);
+          ctx.restore();
+          break;
+        }
         ctx.save();
         ctx.translate(x + wob, y);
         ctx.fillStyle = alpha('#d4e157', a);
