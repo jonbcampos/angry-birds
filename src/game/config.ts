@@ -42,6 +42,21 @@ export const GROUND_Y = 0;
 /** A body further than this outside the level is gone for good. */
 export const WORLD_KILL_MARGIN = 14;
 
+/**
+ * What the camera shows, in metres: this far left of the slingshot, and this
+ * far right of the last piece of the level. Shared by the camera, which frames
+ * exactly this, and by the simulation, which counts any bandit that leaves it
+ * as bonked.
+ *
+ * The second use exists because of a real report: a raccoon blown past the
+ * right edge landed in the gap between "off screen" and "out of the world"
+ * (WORLD_KILL_MARGIN) and sat there alive, invisible and blocking the win. A
+ * child cannot be asked to hit something she cannot see, so leaving the
+ * picture is running away, and running away counts.
+ */
+export const VIEW_LEFT_M = 4.6;
+export const VIEW_RIGHT_M = 2.5;
+
 // --- The slingshot ----------------------------------------------------------
 
 /** Where the pouch rests, in world metres. Ellie stands just behind it. */

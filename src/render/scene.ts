@@ -305,18 +305,36 @@ function pouchOffset(state: GameState): { x: number; y: number } {
   return pull;
 }
 
+/**
+ * Markers along the top edge for anything that matters and has flown above the
+ * screen: the toy in flight (an arrow) and any raccoon (his face). Nothing she
+ * has to deal with is ever invisible. Raccoons that leave by the SIDES are
+ * counted as run away instead (see VIEW_LEFT_M).
+ */
 function drawOffscreen(ctx: CanvasRenderingContext2D, state: GameState): void {
   const lead = state.flying[0];
-  if (!lead || !lead.alive) return;
-  const y = sy(lead.y);
-  if (y > -4) return;
-  const x = sx(lead.x);
-  ctx.fillStyle = alpha('#ffffff', 0.85);
-  ctx.beginPath();
-  ctx.moveTo(x, 3);
-  ctx.lineTo(x - 6, 12);
-  ctx.lineTo(x + 6, 12);
-  ctx.fill();
+  if (lead && lead.alive && sy(lead.y) < -4) {
+    const x = sx(lead.x);
+    ctx.fillStyle = alpha('#ffffff', 0.85);
+    ctx.beginPath();
+    ctx.moveTo(x, 3);
+    ctx.lineTo(x - 6, 12);
+    ctx.lineTo(x + 6, 12);
+    ctx.fill();
+  }
+  for (const b of state.world.bodies) {
+    if (!b.alive || b.tag !== 'bandit' || sy(b.y) > -2) continue;
+    const x = Math.max(10, Math.min(SCREEN.w - 10, sx(b.x)));
+    ctx.fillStyle = alpha('#ffffff', 0.85);
+    ctx.beginPath();
+    ctx.arc(x, 10, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(x, 11);
+    ctx.scale(7, 7);
+    paintRaccoon(ctx, 0.8, state.time, 'scared', 0);
+    ctx.restore();
+  }
 }
 
 // --- Ellie and the slingshot ------------------------------------------------

@@ -1,4 +1,4 @@
-import { SCREEN, SLING_X } from '../game/config';
+import { SCREEN, SLING_X, VIEW_LEFT_M, VIEW_RIGHT_M } from '../game/config';
 
 /**
  * World metres -> virtual pixels.
@@ -28,8 +28,8 @@ export const camera = {
 };
 
 /** Room left of the slingshot for Ellie and the waiting toys. */
-const LEFT_MARGIN_M = 4.6;
-const RIGHT_MARGIN_M = 2.5;
+const LEFT_MARGIN_M = VIEW_LEFT_M;
+const RIGHT_MARGIN_M = VIEW_RIGHT_M;
 /** Ground strip at the bottom of the screen, px. */
 const GROUND_PX = 30;
 /** Empty sky above the tallest thing, in metres. */

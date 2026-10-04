@@ -20,6 +20,8 @@ import {
   FIRECRACKER_SCALE,
   SLING_X,
   SLING_Y,
+  VIEW_LEFT_M,
+  VIEW_RIGHT_M,
   TNT_CHAIN_DELAY,
   TNT_DAMAGE,
   TNT_HALF_MASS,
@@ -714,15 +716,22 @@ export class GameState {
   private cullOutOfBounds(): void {
     const w = this.world;
     const right = this.levelRight + WORLD_KILL_MARGIN;
+    // The camera's frame (see VIEW_LEFT_M). A bandit's centre past this has left the picture.
+    const viewLeft = SLING_X - VIEW_LEFT_M;
+    const viewRight = this.levelRight + VIEW_RIGHT_M;
     for (const b of w.bodies) {
       if (!b.alive || b.isStatic) continue;
-      if (b.x < -WORLD_KILL_MARGIN - 10 || b.x > right || b.y > 8 || b.y < -80) {
-        if (b.tag === 'bandit') {
+      if (b.tag === 'bandit') {
+        if (b.x < viewLeft || b.x > viewRight || b.y > 8) {
+          // Ran away off the edge of the screen: that's a bonk. Report it AT
+          // the edge, so the run-away and the +5000 happen where she can see.
+          b.x = Math.max(viewLeft + 0.6, Math.min(viewRight - 0.6, b.x));
+          b.y = Math.min(b.y, -0.5);
           this.destroy(b);
-        } else {
-          w.remove(b);
         }
+        continue;
       }
+      if (b.x < -WORLD_KILL_MARGIN - 10 || b.x > right || b.y > 8 || b.y < -80) w.remove(b);
     }
   }
 

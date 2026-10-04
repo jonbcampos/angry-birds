@@ -236,3 +236,16 @@ The Whoopee Cushion is the rocket's sibling: tap for a slower, floatier jet (`FA
 `FART_FLOAT`) trailing toot clouds, restitution 0.75 so it ricochets, and a toot on every bounce
 over 2.5 m/s (at most one per 0.18 s, or a single bounce is five toots). It's introduced on its
 own level 15, *Toot Toot!*, rather than slotted earlier, because saves are keyed by level id.
+
+## 15. A raccoon that leaves the picture has run away
+
+Reported from play: a raccoon was off screen, didn't count as bonked, and there was no way to
+know he existed. The camera shows up to 2.5 m past the last fort; a bandit only counted as gone
+14 m past it (`WORLD_KILL_MARGIN`). A raccoon blown into that gap sat there alive, invisible, and
+blocking the win.
+
+Now `VIEW_LEFT_M` / `VIEW_RIGHT_M` live in config and are shared by the camera, which frames
+exactly that, and by the simulation, which counts any bandit whose centre leaves it as bonked.
+The bonk is reported at the edge of the picture, so the run-away and the +5000 happen where she
+can see them. A raccoon above the top of the screen gets a face marker on the top edge, like the
+arrow for a toy in flight. Nothing she has to deal with is ever invisible.
