@@ -142,9 +142,13 @@ const SLEEP_LINEAR = 0.06;
 const SLEEP_ANGULAR = 0.08;
 const TIME_TO_SLEEP = 0.5;
 
-export const MAX_BODIES = 256;
-const MAX_ARBITERS = 2048;
-const MAX_IMPACTS = 128;
+/**
+ * Raised from 256 for the TNT Playground: a giant fort is 100-plus pieces before
+ * anything breaks, and every snapped plank becomes two.
+ */
+export const MAX_BODIES = 512;
+const MAX_ARBITERS = 4096;
+const MAX_IMPACTS = 256;
 
 function pairKey(a: Body, b: Body): number {
   return a.id < b.id ? a.id * MAX_BODIES + b.id : b.id * MAX_BODIES + a.id;

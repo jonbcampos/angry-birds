@@ -285,3 +285,21 @@ and left every cloud. `src/render/backdrop.ts` does it at load instead: it fits 
 colour per row as a line across the row (the dusk sky runs peach to lavender), masks whatever
 differs, repaints the sky, and lifts each whole cloud out as its own image. Those exact clouds
 then drift, each with a smaller, fainter, slower copy behind it for depth.
+
+## 17. The TNT Playground
+
+Asked for: "big effect stages". The campaign is "learn this toy and use it", and sometimes the
+fun is just having something enormous to knock down with everything you've got. Levels 16-20
+are on their own tab in the picker, **always unlocked**, with a full mix of toys and generous
+pars: a five-storey tower with TNT on every floor, a two-storey warehouse with a crate and a
+raccoon in every bay, a castle on a hill, six block towers that domino into each other, and a
+pyramid that's half TNT (16 explosions from one good shot).
+
+`MAX_BODIES` went from 256 to 512 (arbiters 4096, impacts 256), because a giant fort is 100-plus
+pieces before anything snaps in two. Measured during each level's biggest chain: about 0.1 ms
+per tick on average and under 4 ms at worst, on a laptop. Even at four times that on a phone,
+it's inside a frame.
+
+Two of the five failed `verify()` on the first try, both placement mistakes: a raccoon placed
+at the wrong floor height, and two raccoons overlapping lookout posts. The check exists to catch
+exactly that.

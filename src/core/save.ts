@@ -57,6 +57,8 @@ export function recordStars(save: Save, levelId: number, stars: number): void {
  * Three rather than one so a stuck child always has somewhere else to go.
  */
 export function isUnlocked(save: Save, levelId: number): boolean {
-  if (levelId <= 3) return true;
+  // The TNT Playground is never locked: it's for when she just wants to blow
+  // something huge up, not a reward to earn. (Same number as PLAYGROUND_FROM.)
+  if (levelId <= 3 || levelId >= 16) return true;
   return (save.stars[levelId - 1] ?? 0) > 0;
 }

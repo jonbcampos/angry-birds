@@ -26,6 +26,7 @@ import {
   resultButtons,
   selectButtons,
   titleButtons,
+  type SelectTab,
 } from './ui/screens';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement | null;
@@ -56,6 +57,8 @@ let introTime = 0;
 /** Seconds since the result panel appeared; buttons wait a moment so a stray tap can't skip it. */
 let resultTime = 0;
 let impactSoundsThisTick = 0;
+/** Which tab the level picker is on. Opens wherever she last was. */
+let selectTab: SelectTab = 'levels';
 let fartClock = 0;
 /** Real seconds of slow motion left, after a blast. */
 let slowmo = 0;
@@ -75,6 +78,7 @@ frameLevel(state.levelRight, state.levelTop);
 
 function startLevel(id: number): void {
   state.load(levelById(id));
+  selectTab = state.level.playground ? 'playground' : 'levels';
   particles.clear();
   cast.reset(state);
   slowmo = 0;
@@ -108,8 +112,13 @@ function onPointer(p: QueuedPointer): void {
 
   if (phase === 'select') {
     if (p.kind !== 'down') return;
-    const hit = hitTest(selectButtons(save), p.x, p.y);
+    const hit = hitTest(selectButtons(save, selectTab), p.x, p.y);
     if (!hit) return;
+    if (hit.id.startsWith('tab:')) {
+      audio.play('select');
+      selectTab = hit.id === 'tab:playground' ? 'playground' : 'levels';
+      return;
+    }
     if (hit.id === 'back') {
       audio.play('select');
       state.phase = 'title';
@@ -389,7 +398,7 @@ function render(alphaT: number): void {
       drawTitle(ctx, audio.muted, realTime);
       break;
     case 'select':
-      drawSelect(ctx, save);
+      drawSelect(ctx, save, selectTab);
       break;
     case 'paused':
       drawPause(ctx, audio.muted);

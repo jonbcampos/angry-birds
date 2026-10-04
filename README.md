@@ -37,7 +37,7 @@ solid knock sets a crate off. Each blast:
 - shakes the screen hard, slows time briefly so you can watch it all fly, and plays a deep layered
   boom
 
-Fifteen levels. The first three are always open, and beating a level opens the next. Fourth in a
+Fifteen levels, plus the **TNT Playground**: five giant forts packed with TNT, always open, with every toy to knock them down. The first three are always open, and beating a level opens the next. Fourth in a
 set with [Flappy Unicorn](https://jonbcampos.github.io/flappy-unicorn/),
 [Ellie's Rainbow Run](https://jonbcampos.github.io/runner-game/) and
 [Unicorn Squeeze Squad](https://jonbcampos.github.io/tower-defense/). It's built the same way: TypeScript, a 2D canvas, no

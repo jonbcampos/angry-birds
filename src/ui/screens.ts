@@ -57,12 +57,31 @@ const TILE_W = 64;
 const TILE_H = 50;
 const GAP = 10;
 
-export function selectButtons(save: Save): Button[] {
+export type SelectTab = 'levels' | 'playground';
+
+/**
+ * The level picker has two tabs: the campaign, which teaches a toy a level,
+ * and the TNT Playground, which is just giant forts and the whole toy box.
+ */
+export function selectButtons(save: Save, tab: SelectTab = 'levels'): Button[] {
   const out: Button[] = [{ id: 'back', x: 8, y: 8, w: 60, h: 30, label: 'BACK', style: 'secondary' }];
+  const tabW = 140;
+  const tabX = (SCREEN.w - tabW * 2 - 8) / 2;
+  out.push({ id: 'tab:levels', x: tabX, y: 8, w: tabW, h: 30, label: 'LEVELS', style: tab === 'levels' ? 'primary' : 'secondary' });
+  out.push({
+    id: 'tab:playground',
+    x: tabX + tabW + 8,
+    y: 8,
+    w: tabW,
+    h: 30,
+    label: 'TNT PLAYGROUND',
+    style: tab === 'playground' ? 'primary' : 'secondary',
+  });
+  const shown = LEVELS.filter((l) => (tab === 'playground') === (l.playground === true));
   const gridW = COLS * TILE_W + (COLS - 1) * GAP;
   const x0 = (SCREEN.w - gridW) / 2;
-  const y0 = 56;
-  LEVELS.forEach((l, i) => {
+  const y0 = tab === 'playground' ? 80 : 56;
+  shown.forEach((l, i) => {
     const col = i % COLS;
     const row = Math.floor(i / COLS);
     out.push({
@@ -279,10 +298,18 @@ export function drawTitle(ctx: CanvasRenderingContext2D, muted: boolean, time: n
   drawText(ctx, 'Pull back, let go, and bonk the bandits!', cx, 214, { size: 10, align: 'center', color: '#ffffff' });
 }
 
-export function drawSelect(ctx: CanvasRenderingContext2D, save: Save): void {
+export function drawSelect(ctx: CanvasRenderingContext2D, save: Save, tab: SelectTab = 'levels'): void {
   dim(ctx, sprite('title') ? 0.45 : 0.6);
-  drawText(ctx, 'PICK A FORT', SCREEN.w / 2, 24, { size: 18, align: 'center', color: '#ffffff' });
-  drawButtons(ctx, selectButtons(save));
+  drawButtons(ctx, selectButtons(save, tab));
+  if (tab === 'playground') {
+    drawText(ctx, 'Giant forts. Lots of TNT. Every toy!', SCREEN.w / 2, 60, { size: 11, align: 'center', color: PALETTE.star, glow: true });
+    // Each tile shows the fort's name under its number.
+    for (const b of selectButtons(save, tab)) {
+      if (!b.id.startsWith('level:')) continue;
+      const level = LEVELS.find((l) => `level:${l.id}` === b.id);
+      if (level) drawText(ctx, level.name, b.x + b.w / 2, b.y + b.h + 9, { size: 7, align: 'center', color: '#ffffff', glow: true });
+    }
+  }
 }
 
 export function drawResult(ctx: CanvasRenderingContext2D, state: GameState, hasNext: boolean, appear: number): void {
