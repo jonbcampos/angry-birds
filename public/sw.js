@@ -23,7 +23,7 @@
  * the version is the only lever that reaches a phone with the game already on
  * its home screen. Bump it after anything that could have been cached wrong.
  */
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `slingshot-${VERSION}`;
 
 // The shell has stable, known names, so it can be cached up front.

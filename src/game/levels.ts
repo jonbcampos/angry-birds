@@ -43,6 +43,11 @@ export interface Level {
   introduces?: ShotKind;
   /** A TNT Playground level: no lesson, just a giant fort and the whole toy box. */
   playground?: boolean;
+  /**
+   * A BIG BOOM! bonus level, slotted into the campaign every few lessons:
+   * spectacle using only the toys she has by then. Never gates anything.
+   */
+  bonus?: boolean;
 }
 
 /** Levels from here on are the TNT Playground: always open, on their own tab. */
@@ -106,6 +111,15 @@ class Builder {
   }
 }
 
+/** A BIG BOOM! bonus level: see `Level.bonus`. */
+function bonus(id: number, name: string, shots: ShotKind[], par: number, build: (b: Builder) => void): Level {
+  const l = level(id, name, shots, par, build);
+  l.bonus = true;
+  // Bonus ids (21+) are numbered after the playground's but are campaign levels.
+  delete l.playground;
+  return l;
+}
+
 function level(
   id: number,
   name: string,
@@ -152,6 +166,21 @@ export const LEVELS: readonly Level[] = [
     b.tnt(18.2, 0);
   }, 'ducks'),
 
+  // BIG BOOM! bonus levels are slotted between the lessons from here on: no
+  // new toy, no puzzle, just a lot to knock down with what she already has.
+  // (Asked for after she lost interest in the lessons and lit up at the TNT
+  // Playground.) Ids 21+, so existing saves are untouched.
+  bonus(21, 'Block Party', ['ball', 'ducks', 'ball', 'ducks', 'ball'], 3, (b) => {
+    for (const x of [15, 18, 21]) {
+      b.tnt(x - 0.5, 0);
+      b.bandit(x + 0.5, 0);
+      const f1 = b.frame(x, 0, 2.6, 2, 'wood');
+      b.tnt(x, f1);
+      const f2 = b.frame(x, f1, 2.2, 1.8, 'glass');
+      b.bandit(x, f2);
+    }
+  }),
+
   level(4, 'Tall Tower', ['ball', 'ducks', 'ball'], 1, (b) => {
     let top = b.frame(17, 0, 2, 2);
     b.tnt(17, top);
@@ -169,6 +198,16 @@ export const LEVELS: readonly Level[] = [
     const top = b.frame(16.6, 0, 2, 2.2);
     b.bandit(16.6, top);
   }, 'rocket'),
+
+  bonus(22, 'Rocket Range', ['rocket', 'rocket', 'ball', 'ducks', 'rocket'], 3, (b) => {
+    for (const x of [14.5, 17.5, 20.5, 23.5]) {
+      b.bandit(x, 0);
+      const f1 = b.frame(x, 0, 2, 2.4, 'wood');
+      b.tnt(x, f1);
+      const f2 = b.frame(x, f1, 2, 2.4, x === 17.5 || x === 23.5 ? 'glass' : 'wood');
+      b.bandit(x, f2);
+    }
+  }),
 
   level(6, 'Hilltop Fort', ['ball', 'rocket', 'ducks', 'ball'], 2, (b) => {
     const hill = b.platform(14, 22, 2);
@@ -190,6 +229,22 @@ export const LEVELS: readonly Level[] = [
     b.block(13.8, 0, 1, 'stone');
     b.block(18.2, 0, 1, 'stone');
   }, 'bear'),
+
+  bonus(23, 'Teddy Smash', ['bear', 'bear', 'rocket', 'ball', 'ducks'], 3, (b) => {
+    // Two three-storey stone towers with a bridge across the top.
+    let top = 0;
+    for (const x of [17, 21]) {
+      b.tnt(x, 0);
+      const f1 = b.frame(x, 0, 2.4, 2, 'stone');
+      b.bandit(x, f1);
+      const f2 = b.frame(x, f1, 2.4, 2, 'stone', 'wood');
+      b.tnt(x, f2);
+      top = b.frame(x, f2, 2.4, 1.8, 'stone');
+    }
+    const bridge = b.plank(19, top, 2.6, 'stone');
+    b.bandit(19, bridge);
+    b.bandit(23.4, 0);
+  }),
 
   level(8, 'TNT Party', ['ball', 'ball', 'ducks'], 1, (b) => {
     // The first real chain reaction. One good hit on the crates should take
@@ -217,6 +272,20 @@ export const LEVELS: readonly Level[] = [
     b.tri(13.6, 0, 1.6, 1.6, 'stone', true);
     b.tri(18.4, 0, 1.6, 1.6, 'stone');
   }, 'popper'),
+
+  bonus(24, 'Firework Factory', ['popper', 'popper', 'ball', 'rocket', 'ducks'], 2, (b) => {
+    // A wall built entirely of TNT, with the raccoons sheltering behind it.
+    for (const x of [15.6, 16.4, 17.2, 18.0]) {
+      for (let k = 0; k < 3; k++) b.tnt(x, k * 0.8);
+    }
+    b.bandit(16.8, 2.4);
+    const f1 = b.frame(21, 0, 3, 2.2, 'wood');
+    b.bandit(20.5, 0);
+    b.bandit(21.5, 0);
+    b.tnt(21, f1);
+    const f2 = b.frame(21, f1, 2.4, 2, 'glass');
+    b.bandit(21, f2);
+  }),
 
   level(10, 'Twin Towers', ['ducks', 'rocket', 'bear', 'ball'], 2, (b) => {
     for (const x of [15, 21]) {
@@ -267,6 +336,22 @@ export const LEVELS: readonly Level[] = [
     b.bandit(24, 0);
     top = b.frame(24, top, 2, 2, 'wood');
     b.bandit(24, top);
+  }),
+
+  bonus(25, 'Mega Fort', ['bear', 'popper', 'rocket', 'ducks', 'ball', 'popper'], 3, (b) => {
+    // A four-storey, two-column block of flats, every material, TNT throughout.
+    const mats = ['stone', 'wood', 'glass', 'wood'] as const;
+    for (const x of [17.5, 20.5]) {
+      let floor = 0;
+      mats.forEach((m, i) => {
+        if ((i + (x > 19 ? 1 : 0)) % 2 === 0) b.tnt(x, floor);
+        else b.bandit(x, floor);
+        floor = b.frame(x, floor, 2.8, 2, m, i === 2 ? 'wood' : m);
+      });
+      b.bandit(x, floor);
+    }
+    b.tnt(14.5, 0);
+    b.tnt(14.5, 0.8);
   }),
 
   level(13, 'Boom Town', ['ball', 'ball', 'rocket'], 1, (b) => {
@@ -429,6 +514,40 @@ export const LEVELS: readonly Level[] = [
     }
   }),
 ];
+
+/** The level after this one in play order (bonus levels included), or null. */
+export function nextLevel(id: number): Level | null {
+  const i = LEVELS.findIndex((l) => l.id === id);
+  return i >= 0 && i + 1 < LEVELS.length ? LEVELS[i + 1]! : null;
+}
+
+/**
+ * Whether a level can be played, from the stars earned so far.
+ *
+ *  - The TNT Playground is always open.
+ *  - The first three lessons are always open.
+ *  - A lesson opens when the lesson before it is beaten. Bonus levels are
+ *    skipped over: they never gate anything, which is also what keeps every
+ *    existing save's progress exactly as it was when they were added.
+ *  - A bonus level opens when the lesson just before it is beaten.
+ */
+export function isLevelUnlocked(stars: Record<number, number>, id: number): boolean {
+  const i = LEVELS.findIndex((l) => l.id === id);
+  if (i < 0) return false;
+  const level = LEVELS[i]!;
+  if (level.playground) return true;
+  let prev = i - 1;
+  while (prev >= 0 && LEVELS[prev]!.bonus) prev--;
+  if (level.bonus) return prev < 0 || (stars[LEVELS[prev]!.id] ?? 0) > 0;
+  const lessonIndex = LEVELS.slice(0, i).filter((l) => !l.bonus && !l.playground).length;
+  if (lessonIndex < 3) return true;
+  return prev >= 0 && (stars[LEVELS[prev]!.id] ?? 0) > 0;
+}
+
+/** How a level is labelled: its number, or BOOM! for a bonus level. */
+export function levelLabel(l: Level): string {
+  return l.bonus ? 'BOOM!' : String(l.id);
+}
 
 export function levelById(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[0]!;

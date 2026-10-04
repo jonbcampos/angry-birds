@@ -38,7 +38,10 @@ const RACCOON = {
 
 const ELLIE = {
   voice: 'Zephyr',
-  rate: 1.25,
+  // Not sped up: at 1.25 she sat at the same pitch as the raccoons and the two
+  // were hard to tell apart. Her cartoon-ness comes from the direction; the
+  // raccoons keep their speed-up, so they're the squeaky ones.
+  rate: 1,
   profile:
     'a little cartoon girl from a children\'s TV cartoon, about five years old: high, bright, squeaky ' +
     'and bouncy, innocent and goofy, like an animated kid sidekick. NOT grown-up, NOT breathy, NOT ' +

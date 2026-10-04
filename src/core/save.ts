@@ -52,13 +52,6 @@ export function recordStars(save: Save, levelId: number, stars: number): void {
   writeSave(save);
 }
 
-/**
- * The first three levels are always open, and beating a level opens the next.
- * Three rather than one so a stuck child always has somewhere else to go.
- */
-export function isUnlocked(save: Save, levelId: number): boolean {
-  // The TNT Playground is never locked: it's for when she just wants to blow
-  // something huge up, not a reward to earn. (Same number as PLAYGROUND_FROM.)
-  if (levelId <= 3 || levelId >= 16) return true;
-  return (save.stars[levelId - 1] ?? 0) > 0;
-}
+// Unlocking lives with the levels now (`isLevelUnlocked` in game/levels.ts),
+// because it depends on their play order, which bonus levels made different
+// from their id order.

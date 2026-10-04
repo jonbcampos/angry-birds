@@ -51,16 +51,16 @@
     "r.fart1": 1.35,
     "r.fart2": 1.35,
     "r.fart3": 1.35,
-    "e.yay": 1.25,
-    "e.gotcha": 1.25,
-    "e.takethat": 1.25,
-    "e.ew": 1.25,
-    "e.ew2": 1.25,
-    "e.kaboom": 1.25,
-    "e.wow": 1.25,
-    "e.nyah": 1.25,
-    "e.hmph": 1.25,
-    "e.ohno": 1.25,
-    "e.won": 1.25
+    "e.yay": 1,
+    "e.gotcha": 1,
+    "e.takethat": 1,
+    "e.ew": 1,
+    "e.ew2": 1,
+    "e.kaboom": 1,
+    "e.wow": 1,
+    "e.nyah": 1,
+    "e.hmph": 1,
+    "e.ohno": 1,
+    "e.won": 1
   }
 }

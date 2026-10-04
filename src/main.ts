@@ -1,12 +1,12 @@
 import { Audio, type Sfx } from './core/audio';
 import { Input, type QueuedPointer } from './core/input';
 import { startLoop } from './core/loop';
-import { isUnlocked, loadSave, recordStars, writeSave } from './core/save';
+import { loadSave, recordStars, writeSave } from './core/save';
 import { Viewport } from './core/viewport';
 import { WakeLock } from './core/wakelock';
 import { BIG_IMPACT_J, BOOM_SLOWMO, BOOM_TIME_SCALE, SCREEN } from './game/config';
 import { MAT } from './game/content';
-import { LEVELS, levelById } from './game/levels';
+import { LEVELS, isLevelUnlocked, levelById, nextLevel } from './game/levels';
 import { GameState, type GameEvent } from './game/state';
 import { camera, frameLevel, shake, sx, sy, updateShake } from './render/camera';
 import { PALETTE } from './render/palette';
@@ -152,7 +152,7 @@ function onPointer(p: QueuedPointer): void {
     audio.play('select');
     if (hit.id === 'levels') state.phase = 'select';
     else if (hit.id === 'retry') startLevel(state.level.id);
-    else if (hit.id === 'next') startLevel(state.level.id + 1);
+    else if (hit.id === 'next') startLevel(nextLevel(state.level.id)!.id);
     return;
   }
 
@@ -199,8 +199,8 @@ function pause(): void {
 }
 
 function hasNext(): boolean {
-  const next = state.level.id + 1;
-  return next <= LEVELS.length && isUnlocked(save, next);
+  const next = nextLevel(state.level.id);
+  return next !== null && isLevelUnlocked(save.stars, next.id);
 }
 
 // --- Events -> sound and particles ------------------------------------------
@@ -331,7 +331,7 @@ function update(dt: number): void {
     } else if (k === 'trick') {
       state.tap();
     } else if (k === 'confirm' && state.phase === 'won' && hasNext()) {
-      startLevel(state.level.id + 1);
+      startLevel(nextLevel(state.level.id)!.id);
     }
   });
   input.drainPointer(onPointer);

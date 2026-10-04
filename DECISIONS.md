@@ -316,3 +316,24 @@ synthesised launch twang was worse than the original whoosh.
   tease while aiming starts at 6 s and repeats every 12 s, not 3.5 and 6.5.
 
 The burps, the toots and "Missed me!" after a miss stay frequent; they're the jokes.
+
+## 19. BIG BOOM! bonus levels inside the campaign; Ellie at natural speed
+
+From play: she started losing interest in the lessons, then found the TNT Playground and lit up
+again. So spectacle is now spread through the campaign: five BIG BOOM! bonus levels, after
+lessons 3, 5, 7, 9 and 12, each using only the toys she has by then (Block Party, Rocket Range,
+Teddy Smash, Firework Factory, Mega Fort). Winning the lesson before one leads straight into it.
+
+Because bonus levels sit between lessons, play order is no longer id order. Unlocking moved
+into `isLevelUnlocked` (game/levels.ts), which skips bonus levels when deciding whether a lesson
+is open. Bonus levels never gate anything, so every existing save keeps exactly the progress it
+had. `nextLevel` follows play order for the NEXT button. Bonus ids are 21-25, so saved stars
+never move. Bonus tiles say BOOM! instead of a number, so the numbers she knows stay put.
+
+A bug worth recording: the playground was "id >= 16", and the bonus ids (21+) were caught by
+it, which made them always open and hid them from the campaign. Bonus levels now clear the
+flag explicitly.
+
+Voices: Ellie and the raccoons sounded too alike, because both were sped up to a similar pitch.
+Ellie now plays at natural speed (`rate: 1`) and the raccoons keep theirs. The next lever, if
+needed, is a different, deeper voice for the raccoons.

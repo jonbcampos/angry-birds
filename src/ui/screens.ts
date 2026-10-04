@@ -1,8 +1,8 @@
 import { SCREEN } from '../game/config';
 import { SHOTS } from '../game/content';
 import type { GameState } from '../game/state';
-import { LEVELS } from '../game/levels';
-import { isUnlocked, type Save } from '../core/save';
+import { LEVELS, isLevelUnlocked, levelLabel } from '../game/levels';
+import type { Save } from '../core/save';
 import { PALETTE, alpha } from '../render/palette';
 import { paintEllie, paintRaccoon, paintToy, roundRect } from '../render/scene';
 import { sprite } from '../render/sprites';
@@ -27,6 +27,8 @@ export interface Button {
   style: 'primary' | 'secondary' | 'icon' | 'tile';
   locked?: boolean;
   stars?: number;
+  /** A BIG BOOM! bonus level tile: drawn hot and orange. */
+  bonus?: boolean;
 }
 
 export function hitTest(buttons: readonly Button[], x: number, y: number): Button | null {
@@ -81,18 +83,23 @@ export function selectButtons(save: Save, tab: SelectTab = 'levels'): Button[] {
   const gridW = COLS * TILE_W + (COLS - 1) * GAP;
   const x0 = (SCREEN.w - gridW) / 2;
   const y0 = tab === 'playground' ? 80 : 56;
+  // Four rows of tiles once bonus levels joined the campaign: shorter tiles.
+  const rows = Math.ceil(shown.length / COLS);
+  const tileH = rows > 3 ? 42 : TILE_H;
+  const gapY = rows > 3 ? 8 : GAP;
   shown.forEach((l, i) => {
     const col = i % COLS;
     const row = Math.floor(i / COLS);
     out.push({
       id: `level:${l.id}`,
       x: x0 + col * (TILE_W + GAP),
-      y: y0 + row * (TILE_H + GAP),
+      y: y0 - (rows > 3 ? 8 : 0) + row * (tileH + gapY),
       w: TILE_W,
-      h: TILE_H,
-      label: String(l.id),
+      h: tileH,
+      label: levelLabel(l),
       style: 'tile',
-      locked: !isUnlocked(save, l.id),
+      locked: !isLevelUnlocked(save.stars, l.id),
+      bonus: l.bonus === true,
       stars: save.stars[l.id] ?? 0,
     });
   });
@@ -193,10 +200,10 @@ function drawButton(ctx: CanvasRenderingContext2D, b: Button): void {
   }
 
   if (b.style === 'tile') {
-    ctx.fillStyle = b.locked ? alpha(PALETTE.panelEdge, 0.85) : PALETTE.panel;
+    ctx.fillStyle = b.locked ? alpha(PALETTE.panelEdge, 0.85) : b.bonus ? '#d9541e' : PALETTE.panel;
     roundRect(ctx, b.x, b.y, b.w, b.h, 8);
     ctx.fill();
-    ctx.strokeStyle = b.locked ? PALETTE.panelEdge : '#ffffff';
+    ctx.strokeStyle = b.locked ? PALETTE.panelEdge : b.bonus ? PALETTE.star : '#ffffff';
     ctx.lineWidth = 2;
     ctx.stroke();
     if (b.locked) {
@@ -212,9 +219,15 @@ function drawButton(ctx: CanvasRenderingContext2D, b: Button): void {
       ctx.fillRect(cx - 9, cy - 4, 18, 13);
       return;
     }
-    drawText(ctx, b.label, b.x + b.w / 2, b.y + 19, { size: 18, align: 'center', color: '#ffffff' });
+    const short = b.h < 48;
+    drawText(ctx, b.label, b.x + b.w / 2, b.y + (short ? 15 : 19), {
+      size: b.bonus ? (short ? 12 : 14) : short ? 15 : 18,
+      align: 'center',
+      color: b.bonus ? PALETTE.star : '#ffffff',
+      glow: b.bonus === true,
+    });
     for (let i = 0; i < 3; i++) {
-      star(ctx, b.x + b.w / 2 + (i - 1) * 16, b.y + b.h - 13, 6, i < (b.stars ?? 0));
+      star(ctx, b.x + b.w / 2 + (i - 1) * 16, b.y + b.h - (short ? 10 : 13), short ? 5 : 6, i < (b.stars ?? 0));
     }
     return;
   }
@@ -367,7 +380,8 @@ export function drawHud(ctx: CanvasRenderingContext2D, state: GameState, introTi
   }
   drawText(ctx, `${state.score}`, SCREEN.w - 10, 46, { size: 10, align: 'right', color: '#ffffff', glow: true });
 
-  drawText(ctx, `${state.level.id}. ${state.level.name}`, 84, 23, { size: 10, color: '#ffffff', glow: true });
+  const title = state.level.bonus ? `BIG BOOM! ${state.level.name}` : `${state.level.id}. ${state.level.name}`;
+  drawText(ctx, title, 84, 23, { size: 10, color: state.level.bonus ? PALETTE.star : '#ffffff', glow: true });
 
   // The new-toy card: what it is and what tapping does.
   const kind = state.level.introduces;
